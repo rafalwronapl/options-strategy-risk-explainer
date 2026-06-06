@@ -14,6 +14,14 @@ Open `index.html` in a browser.
 
 No install, no API keys, no backend.
 
+## Development
+
+```bash
+npm run check
+```
+
+The project is intentionally dependency-light. The prototype is plain HTML/CSS/JS and the tests run with Node.
+
 ## Current Scope
 
 - European Black-Scholes approximation for calls and puts.
