@@ -246,6 +246,27 @@ canvas {
   gap: 10px;
 }
 
+.summaryList {
+  display: grid;
+  gap: 8px;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+
+.summaryItem span {
+  color: var(--muted);
+}
+
+.summaryItem strong {
+  text-align: right;
+}
+
 .metric {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -331,6 +352,32 @@ th {
 .report {
   display: grid;
   gap: 12px;
+}
+
+.riskFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.riskFlag {
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 750;
+  background: #eef7f5;
+  color: var(--accentDark);
+}
+
+.riskFlag.warn {
+  background: #fff8ee;
+  color: var(--warn);
+}
+
+.riskFlag.danger {
+  background: #fff1f1;
+  color: var(--danger);
 }
 
 .assumptions {

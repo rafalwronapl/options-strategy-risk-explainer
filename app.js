@@ -5,6 +5,8 @@ const reportEl = document.getElementById("riskReport");
 const validationEl = document.getElementById("validation");
 const exposureEl = document.getElementById("exposure");
 const comparisonEl = document.getElementById("comparison");
+const positionSummaryEl = document.getElementById("positionSummary");
+const riskFlagsEl = document.getElementById("riskFlags");
 const chart = document.getElementById("payoffChart");
 const ctx = chart.getContext("2d");
 
@@ -602,6 +604,28 @@ function renderExposure(legs, market, netGreeks) {
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
 }
 
+function renderPositionSummary(legs, market) {
+  const calls = legs.filter((leg) => leg.type === "call");
+  const puts = legs.filter((leg) => leg.type === "put");
+  const stocks = legs.filter((leg) => leg.type === "stock");
+  const shortOptions = legs.filter((leg) => leg.side === "short" && leg.type !== "stock");
+  const longOptions = legs.filter((leg) => leg.side === "long" && leg.type !== "stock");
+  const netPremium = legs.reduce((sum, leg) => {
+    if (leg.type === "stock") return sum;
+    return sum + (-signed(leg) * leg.premium * leg.qty * market.multiplier);
+  }, 0);
+  const rows = [
+    ["Calls / Puts / Stock", `${calls.length} / ${puts.length} / ${stocks.length}`],
+    ["Long Option Contracts", longOptions.reduce((sum, leg) => sum + leg.qty, 0).toFixed(0)],
+    ["Short Option Contracts", shortOptions.reduce((sum, leg) => sum + leg.qty, 0).toFixed(0)],
+    ["Net Premium Cashflow", `${money(netPremium)} ${netPremium >= 0 ? "credit" : "debit"}`],
+    ["Structure Type", shortOptions.length && longOptions.length ? "multi-leg spread" : shortOptions.length ? "short premium" : "long premium / stock"],
+  ];
+  positionSummaryEl.innerHTML = rows.map(([label, value]) => `
+    <div class="summaryItem"><span>${label}</span><strong>${value}</strong></div>
+  `).join("");
+}
+
 function reportBlocks(legs, market, risk, netGreeks, scenarios) {
   const hasShortOption = legs.some((leg) => leg.side === "short" && leg.type !== "stock");
   const hasShortGamma = netGreeks.gamma < -0.05;
@@ -725,6 +749,9 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
 }
 
 function renderReport(blocks) {
+  riskFlagsEl.innerHTML = blocks.map((block) => `
+    <span class="riskFlag ${block.level}">${block.title}</span>
+  `).join("");
   reportEl.innerHTML = blocks.map((block) => `
     <div class="reportBlock ${block.level}">
       <strong>${block.title}</strong>
@@ -751,6 +778,7 @@ function render() {
   renderScenarios(scenarios);
   renderComparison(scenarios, market);
   renderExposure(legs, market, netGreeks);
+  renderPositionSummary(legs, market);
   renderReport(reportBlocks(legs, market, risk, netGreeks, scenarios));
 }
 
