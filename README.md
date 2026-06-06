@@ -17,7 +17,7 @@ No install, no API keys, no backend.
 ## Current Scope
 
 - European Black-Scholes approximation for calls and puts.
-- Manual option legs: long/short, call/put, strike, premium, quantity.
+- Manual option legs: long/short, call/put, strike, premium, quantity, per-leg IV.
 - Presets: covered call, bull call spread, iron condor, short strangle, long straddle, collar, ratio call spread.
 - Payoff chart at expiry.
 - Breakeven markers, strike markers, and current spot marker.
@@ -28,6 +28,7 @@ No install, no API keys, no backend.
 - Text risk report export.
 - Strategy vs underlying comparison.
 - Exposure breakdown.
+- IV stress shifts each option leg relative to its own IV.
 - Core math tests.
 
 ## Not In Scope Yet
@@ -71,7 +72,7 @@ This checks JavaScript syntax and runs core math tests for:
 
 ## Next Technical Steps
 
-1. Add per-leg IV and optional dividend yield.
+1. Add optional dividend yield.
 2. Add CSV/PDF export.
 3. Add portfolio-level exposure by underlying and expiration.
 4. Add margin/risk approximations per broker model.
