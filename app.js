@@ -123,6 +123,7 @@ function readLegs() {
     strike: parseNumeric(node.querySelector(".strike").value),
     premium: parseNumeric(node.querySelector(".premium").value),
     qty: parseNumeric(node.querySelector(".qty").value),
+    iv: parseNumeric(node.querySelector(".legIv").value) / 100,
   }));
 }
 
@@ -148,6 +149,7 @@ function validateStrategy(market, legs) {
     if (leg.type !== "stock" && (!Number.isFinite(leg.strike) || leg.strike <= 0)) errors.push(`${label}: option strike must be positive.`);
     if (!Number.isFinite(leg.premium) || leg.premium < 0) errors.push(`${label}: premium/cost must be zero or positive.`);
     if (!Number.isFinite(leg.qty) || leg.qty <= 0) errors.push(`${label}: quantity must be positive.`);
+    if (leg.type !== "stock" && (!Number.isFinite(leg.iv) || leg.iv <= 0)) errors.push(`${label}: leg IV must be positive.`);
   });
   return errors;
 }
@@ -172,7 +174,7 @@ function legMarkToModel(leg, market) {
   const q = leg.qty * market.multiplier * signed(leg);
   if (leg.type === "stock") return q * (market.spot - leg.premium);
   const years = Math.max(0, market.days) / 365;
-  const model = blackScholes(leg.type, market.spot, leg.strike, years, market.rate, market.iv);
+  const model = blackScholes(leg.type, market.spot, leg.strike, years, market.rate, leg.iv || market.iv);
   return q * (model.price - leg.premium);
 }
 
@@ -228,7 +230,7 @@ function greeks(legs, market) {
       acc.delta += leg.qty * market.multiplier * signed(leg);
       return acc;
     }
-    const model = blackScholes(leg.type, market.spot, leg.strike, market.days / 365, market.rate, market.iv);
+    const model = blackScholes(leg.type, market.spot, leg.strike, market.days / 365, market.rate, leg.iv || market.iv);
     const q = leg.qty * market.multiplier * signed(leg);
     acc.delta += model.delta * q;
     acc.gamma += model.gamma * q;
@@ -239,6 +241,7 @@ function greeks(legs, market) {
 }
 
 function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qty: 1 }) {
+  const defaultIv = Number.isFinite(leg.iv) ? leg.iv * 100 : parseNumeric(document.getElementById("iv").value);
   const row = document.createElement("div");
   row.className = "leg";
   row.innerHTML = `
@@ -264,6 +267,9 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     <label>Qty
       <input class="qty" type="number" step="1" min="1">
     </label>
+    <label>IV %
+      <input class="legIv" type="number" step="0.1" min="0.1">
+    </label>
     <button class="removeLeg" type="button" title="Remove leg">x</button>
   `;
   row.querySelector(".side").value = leg.side;
@@ -271,6 +277,7 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
   row.querySelector(".strike").value = leg.strike;
   row.querySelector(".premium").value = leg.premium;
   row.querySelector(".qty").value = leg.qty;
+  row.querySelector(".legIv").value = defaultIv;
   row.querySelector(".removeLeg").addEventListener("click", () => {
     row.remove();
     render();
@@ -451,7 +458,12 @@ function scenarioRows(legs, market) {
     ["Half time left", market.spot, market.iv, Math.max(0, market.days / 2)],
     ["Expiry", market.spot, market.iv, 0],
   ].map(([name, spot, iv, days]) => {
-    const pl = totalModelPl(legs, { ...market, spot, iv, days });
+    const ivShift = iv - market.iv;
+    const shiftedLegs = legs.map((leg) => ({
+      ...leg,
+      iv: leg.type === "stock" ? leg.iv : Math.max(0.01, (leg.iv || market.iv) + ivShift),
+    }));
+    const pl = totalModelPl(shiftedLegs, { ...market, spot, iv, days });
     return { name, spot, iv, days, pl, delta: pl - base };
   });
 }
@@ -535,7 +547,6 @@ function renderExposure(legs, market, netGreeks) {
 
 function reportBlocks(legs, market, risk, netGreeks, scenarios) {
   const hasShortOption = legs.some((leg) => leg.side === "short" && leg.type !== "stock");
-  const hasNakedCall = hasUncoveredShortCall(legs);
   const hasShortGamma = netGreeks.gamma < -0.05;
   const nearExpiry = market.days <= 7;
   const worst = scenarios.reduce((a, b) => (a.pl < b.pl ? a : b));
@@ -550,7 +561,7 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
     text: `Net delta is ${netGreeks.delta.toFixed(1)}, theta is ${money(netGreeks.theta)} per day, and vega is ${money(netGreeks.vega)} per 1 IV point. The largest displayed shock is ${strongestShock.name}, moving mark-to-model P/L by ${money(strongestShock.delta)} from the base case.`,
   });
 
-  if (hasNakedCall || !risk.definedRisk) {
+  if (!risk.definedRisk) {
     blocks.push({
       level: "danger",
       title: "Unlimited loss risk",
@@ -603,17 +614,6 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
   return blocks;
 }
 
-function hasUncoveredShortCall(legs) {
-  const shortCalls = legs.filter((leg) => leg.side === "short" && leg.type === "call");
-  const longCalls = legs.filter((leg) => leg.side === "long" && leg.type === "call");
-  return shortCalls.some((shortLeg) => {
-    const coveringQty = longCalls
-      .filter((longLeg) => longLeg.strike > shortLeg.strike)
-      .reduce((sum, leg) => sum + leg.qty, 0);
-    return coveringQty < shortLeg.qty;
-  });
-}
-
 function renderReport(blocks) {
   reportEl.innerHTML = blocks.map((block) => `
     <div class="reportBlock ${block.level}">
@@ -659,7 +659,7 @@ function exportReport() {
     `Multiplier: ${market.multiplier}`,
     "",
     "Legs:",
-    ...legs.map((leg, index) => `${index + 1}. ${leg.side} ${leg.qty} ${leg.type} strike=${leg.strike} premium=${leg.premium}`),
+    ...legs.map((leg, index) => `${index + 1}. ${leg.side} ${leg.qty} ${leg.type} strike=${leg.strike} premium=${leg.premium} IV=${((leg.iv || market.iv) * 100).toFixed(1)}%`),
     "",
     "Scenarios:",
     ...scenarios.map((row) => `${row.name}: spot=${row.spot.toFixed(2)}, IV=${(row.iv * 100).toFixed(1)}%, days=${row.days.toFixed(0)}, P/L=${money(row.pl)}`),

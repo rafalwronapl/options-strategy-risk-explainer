@@ -26,7 +26,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, normalCdf, parseNumeric, presets };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, normalCdf, parseNumeric, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
@@ -72,5 +72,24 @@ assert.strictEqual(coveredCallRisk.definedReward, true);
 const strangleRisk = engine.exactPayoffRisk(engine.presets.shortStrangle, { spot: 500, multiplier: 100 });
 assert.strictEqual(strangleRisk.definedRisk, false);
 assert.strictEqual(strangleRisk.upsideUnlimitedLoss, true);
+
+const market = { symbol: "SPY", spot: 500, days: 35, iv: 0.22, rate: 0.045, multiplier: 100 };
+const coveredCallReport = engine.reportBlocks(
+  engine.presets.coveredCall,
+  market,
+  coveredCallRisk,
+  engine.greeks(engine.presets.coveredCall, market),
+  engine.scenarioRows(engine.presets.coveredCall, market)
+);
+assert(!coveredCallReport.some((block) => block.title === "Unlimited loss risk"));
+
+const strangleReport = engine.reportBlocks(
+  engine.presets.shortStrangle,
+  market,
+  strangleRisk,
+  engine.greeks(engine.presets.shortStrangle, market),
+  engine.scenarioRows(engine.presets.shortStrangle, market)
+);
+assert(strangleReport.some((block) => block.title === "Unlimited loss risk"));
 
 console.log("core tests passed");
