@@ -26,13 +26,15 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, normalCdf, parseNumeric, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, normalCdf, parseNumeric, parseOptionalNumeric, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
 assert(Math.abs(engine.normalCdf(0) - 0.5) < 0.000001);
 assert.strictEqual(engine.parseNumeric("4,5"), 4.5);
 assert.strictEqual(engine.parseNumeric("4.5"), 4.5);
+assert(Number.isNaN(engine.parseOptionalNumeric("")));
+assert.strictEqual(engine.parseOptionalNumeric("1,25"), 1.25);
 assert.strictEqual(engine.csvEscape('a,"b"'), '"a,""b"""');
 
 const call = engine.blackScholes("call", 100, 100, 1, 0.05, 0.2);
@@ -53,6 +55,9 @@ const bullCall = [
 assert.strictEqual(engine.totalPayoff(bullCall, 90, 100), -400);
 assert.strictEqual(engine.totalPayoff(bullCall, 105, 100), 100);
 assert.strictEqual(engine.totalPayoff(bullCall, 120, 100), 600);
+const bullCallBreakEvens = engine.breakEvens(bullCall, { spot: 100, multiplier: 100 });
+assert.strictEqual(bullCallBreakEvens.length, 1);
+assert.strictEqual(bullCallBreakEvens[0], 104);
 
 const shortCall = [{ side: "short", type: "call", strike: 100, premium: 3, qty: 1 }];
 const points = [90, 100, 110, 120, 130].map((spot) => ({
@@ -95,5 +100,26 @@ const strangleReport = engine.reportBlocks(
   engine.scenarioRows(engine.presets.shortStrangle, market)
 );
 assert(strangleReport.some((block) => block.title === "Unlimited loss risk"));
+
+const missingLiquidityReport = engine.reportBlocks(
+  engine.presets.ironCondor,
+  market,
+  ironCondorRisk,
+  engine.greeks(engine.presets.ironCondor, market),
+  engine.scenarioRows(engine.presets.ironCondor, market)
+);
+assert(missingLiquidityReport.some((block) => block.title === "Missing liquidity data"));
+
+const badMarketLegs = [{ side: "long", type: "call", strike: 100, premium: 5, qty: 1, iv: 0.2, bid: 6, ask: 7, openInterest: 0 }];
+const badMarketRisk = engine.exactPayoffRisk(badMarketLegs, { spot: 100, multiplier: 100 });
+const badMarketReport = engine.reportBlocks(
+  badMarketLegs,
+  { symbol: "T", spot: 100, days: 30, iv: 0.2, rate: 0.04, dividend: 0, multiplier: 100 },
+  badMarketRisk,
+  engine.greeks(badMarketLegs, { spot: 100, days: 30, iv: 0.2, rate: 0.04, dividend: 0, multiplier: 100 }),
+  engine.scenarioRows(badMarketLegs, { spot: 100, days: 30, iv: 0.2, rate: 0.04, dividend: 0, multiplier: 100 })
+);
+assert(badMarketReport.some((block) => block.title === "Entered premium outside bid/ask"));
+assert(badMarketReport.some((block) => block.title === "Zero open interest"));
 
 console.log("core tests passed");

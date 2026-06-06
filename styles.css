@@ -202,6 +202,28 @@ select {
   color: var(--danger);
 }
 
+.advancedLeg {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  background: #fbfcfc;
+}
+
+.advancedLeg summary {
+  cursor: pointer;
+  color: var(--accentDark);
+  font-weight: 750;
+  font-size: 13px;
+}
+
+.advancedGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
 canvas {
   display: block;
   width: 100%;
@@ -397,5 +419,14 @@ th {
   .removeLeg {
     grid-column: auto;
     min-height: 38px;
+  }
+
+  .advancedLeg,
+  .advancedGrid {
+    grid-column: 1 / -1;
+  }
+
+  .advancedGrid {
+    grid-template-columns: 1fr;
   }
 }

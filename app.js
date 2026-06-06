@@ -106,6 +106,13 @@ function parseNumeric(value) {
   return Number(String(value).replace(",", "."));
 }
 
+function parseOptionalNumeric(value) {
+  if (typeof value === "number") return value;
+  const text = String(value).trim();
+  if (!text) return NaN;
+  return Number(text.replace(",", "."));
+}
+
 function readInputs() {
   return {
     symbol: document.getElementById("symbol").value.trim() || "UNDERLYING",
@@ -126,9 +133,9 @@ function readLegs() {
     premium: parseNumeric(node.querySelector(".premium").value),
     qty: parseNumeric(node.querySelector(".qty").value),
     iv: parseNumeric(node.querySelector(".legIv").value) / 100,
-    bid: parseNumeric(node.querySelector(".bid").value),
-    ask: parseNumeric(node.querySelector(".ask").value),
-    openInterest: parseNumeric(node.querySelector(".openInterest").value),
+    bid: parseOptionalNumeric(node.querySelector(".bid").value),
+    ask: parseOptionalNumeric(node.querySelector(".ask").value),
+    openInterest: parseOptionalNumeric(node.querySelector(".openInterest").value),
   }));
 }
 
@@ -269,7 +276,7 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     <label>Strike
       <input class="strike" type="number" step="0.01">
     </label>
-    <label>Premium/Cost
+    <label>Premium
       <input class="premium" type="number" step="0.01">
     </label>
     <label>Qty
@@ -278,16 +285,21 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     <label>IV %
       <input class="legIv" type="number" step="0.1" min="0.1">
     </label>
-    <label>Bid
-      <input class="bid" type="number" step="0.01" min="0">
-    </label>
-    <label>Ask
-      <input class="ask" type="number" step="0.01" min="0">
-    </label>
-    <label>OI
-      <input class="openInterest" type="number" step="1" min="0">
-    </label>
     <button class="removeLeg" type="button" title="Remove leg">x</button>
+    <details class="advancedLeg">
+      <summary>Liquidity</summary>
+      <div class="advancedGrid">
+        <label>Bid
+          <input class="bid" type="number" step="0.01" min="0">
+        </label>
+        <label>Ask
+          <input class="ask" type="number" step="0.01" min="0">
+        </label>
+        <label>Open Interest
+          <input class="openInterest" type="number" step="1" min="0">
+        </label>
+      </div>
+    </details>
   `;
   row.querySelector(".side").value = leg.side;
   row.querySelector(".type").value = leg.type;
@@ -341,7 +353,8 @@ function breakEvens(legs, market) {
   const strikes = [...new Set(legs.filter((leg) => leg.type !== "stock").map((leg) => leg.strike))]
     .filter((strike) => Number.isFinite(strike) && strike > 0)
     .sort((a, b) => a - b);
-  const bounds = [0, ...strikes, Math.max(market.spot * 2, (strikes.at(-1) || market.spot) * 1.5)]
+  const lastStrike = strikes.at(-1) || market.spot;
+  const bounds = [0, ...strikes]
     .filter((value, index, arr) => Number.isFinite(value) && value >= 0 && arr.indexOf(value) === index)
     .sort((a, b) => a - b);
   const roots = [];
@@ -357,7 +370,15 @@ function breakEvens(legs, market) {
       roots.push(root);
     }
   }
-  if (totalPayoff(legs, bounds.at(-1), market.multiplier) === 0) roots.push(bounds.at(-1));
+
+  const tailLeft = bounds.at(-1) ?? 0;
+  const tailValue = totalPayoff(legs, tailLeft, market.multiplier);
+  const tailSlope = payoffSlopeAtInfinity(legs, "up", market.multiplier);
+  if (tailValue === 0) roots.push(tailLeft);
+  if (tailSlope !== 0) {
+    const root = tailLeft - (tailValue / tailSlope);
+    if (root >= tailLeft && root <= Math.max(lastStrike * 100, market.spot * 100)) roots.push(root);
+  }
   return [...new Set(roots.map((root) => Number(root.toFixed(4))))].sort((a, b) => a - b);
 }
 
@@ -376,7 +397,7 @@ function boundedness(points) {
   };
 }
 
-function drawChart(points, legs, market, breakevens) {
+function drawChart(points, legs, market, breakevens, risk) {
   const dpr = window.devicePixelRatio || 1;
   const rect = chart.getBoundingClientRect();
   chart.width = Math.round(rect.width * dpr);
@@ -464,6 +485,15 @@ function drawChart(points, legs, market, breakevens) {
   ctx.fillText(`High ${money(maxY)}`, pad, 18);
   ctx.fillText(`${Math.round(minX)}`, pad, height - pad + 22);
   ctx.fillText(`${Math.round(maxX)}`, width - pad - 30, height - pad + 22);
+
+  if (!risk.definedRisk) {
+    ctx.fillStyle = "#a12b2b";
+    ctx.font = "bold 13px Segoe UI, Arial";
+    ctx.fillText("Tail risk continues beyond chart", pad, pad + 16);
+    if (risk.upsideUnlimitedLoss) {
+      ctx.fillText("loss can expand to the right", width - pad - 170, pad + 16);
+    }
+  }
 }
 
 function scenarioRows(legs, market) {
@@ -638,6 +668,38 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
     });
   }
 
+  const missingLiquidityLegs = legs.filter((leg) => leg.type !== "stock" && (!Number.isFinite(leg.bid) || !Number.isFinite(leg.ask) || !Number.isFinite(leg.openInterest)));
+  if (missingLiquidityLegs.length) {
+    blocks.push({
+      level: "warn",
+      title: "Missing liquidity data",
+      text: `${missingLiquidityLegs.length} option leg(s) are missing bid, ask, or open interest. The payoff math can be correct while real fills remain poor.`,
+    });
+  }
+
+  const premiumOutsideMarketLegs = legs.filter((leg) => (
+    leg.type !== "stock"
+    && Number.isFinite(leg.bid)
+    && Number.isFinite(leg.ask)
+    && (leg.premium < leg.bid || leg.premium > leg.ask)
+  ));
+  if (premiumOutsideMarketLegs.length) {
+    blocks.push({
+      level: "warn",
+      title: "Entered premium outside bid/ask",
+      text: `${premiumOutsideMarketLegs.length} option leg(s) use a premium outside the entered bid/ask range. Check whether you entered a fill, mark, mid, or stale quote.`,
+    });
+  }
+
+  const zeroOiLegs = legs.filter((leg) => leg.type !== "stock" && Number.isFinite(leg.openInterest) && leg.openInterest === 0);
+  if (zeroOiLegs.length) {
+    blocks.push({
+      level: "warn",
+      title: "Zero open interest",
+      text: `${zeroOiLegs.length} option leg(s) have zero open interest entered. That can make exits fragile even if the theoretical structure looks clean.`,
+    });
+  }
+
   const lowOiLegs = legs.filter((leg) => leg.type !== "stock" && Number.isFinite(leg.openInterest) && leg.openInterest > 0 && leg.openInterest < 100);
   if (lowOiLegs.length) {
     blocks.push({
@@ -684,7 +746,7 @@ function render() {
   const scenarios = scenarioRows(legs, market);
   const breakevenPoints = breakEvens(legs, market);
 
-  drawChart(points, legs, market, breakevenPoints);
+  drawChart(points, legs, market, breakevenPoints, risk);
   renderSummary(market, points, risk, netGreeks);
   renderScenarios(scenarios);
   renderComparison(scenarios, market);
