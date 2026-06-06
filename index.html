@@ -17,6 +17,7 @@
       <label class="fileButton">Load JSON
         <input id="loadStrategy" type="file" accept="application/json,.json">
       </label>
+      <button id="exportCsv" type="button">Export CSV</button>
       <button id="exportReport" type="button">Export Report</button>
     </div>
   </header>
@@ -44,6 +45,9 @@
         </label>
         <label>Risk-Free Rate %
           <input id="rate" type="number" step="0.1" value="4.5">
+        </label>
+        <label>Dividend Yield %
+          <input id="dividend" type="number" step="0.1" value="0">
         </label>
         <label>Contract Multiplier
           <input id="multiplier" type="number" min="1" step="1" value="100">
@@ -122,8 +126,9 @@
       <h2>Model Assumptions</h2>
       <div class="assumptions">
         <div>European Black-Scholes approximation for mark-to-model scenarios.</div>
-        <div>Flat IV assumption: one implied volatility is applied to every option leg.</div>
-        <div>No dividends, borrow costs, skew surface, commissions, slippage, or broker margin model.</div>
+        <div>Per-leg IV is supported, but no volatility smile/skew surface is inferred.</div>
+        <div>Dividend yield is modeled as a continuous yield approximation.</div>
+        <div>No borrow costs, commissions, slippage, or broker margin model.</div>
         <div>American-style early assignment risk is described as a warning, not priced.</div>
       </div>
     </section>

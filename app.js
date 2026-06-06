@@ -63,34 +63,35 @@ function normalPdf(x) {
   return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
 }
 
-function blackScholes(type, spot, strike, years, rate, vol) {
+function blackScholes(type, spot, strike, years, rate, vol, dividend = 0) {
   if (years <= 0 || vol <= 0 || strike <= 0 || spot <= 0) {
     const intrinsic = type === "call" ? Math.max(0, spot - strike) : Math.max(0, strike - spot);
     return { price: intrinsic, delta: type === "call" ? (spot > strike ? 1 : 0) : (spot < strike ? -1 : 0), gamma: 0, theta: 0, vega: 0 };
   }
 
   const sqrtT = Math.sqrt(years);
-  const d1 = (Math.log(spot / strike) + (rate + 0.5 * vol * vol) * years) / (vol * sqrtT);
+  const d1 = (Math.log(spot / strike) + (rate - dividend + 0.5 * vol * vol) * years) / (vol * sqrtT);
   const d2 = d1 - vol * sqrtT;
-  const disc = Math.exp(-rate * years);
+  const rateDisc = Math.exp(-rate * years);
+  const dividendDisc = Math.exp(-dividend * years);
   const pdf = normalPdf(d1);
 
   if (type === "call") {
     return {
-      price: spot * normalCdf(d1) - strike * disc * normalCdf(d2),
-      delta: normalCdf(d1),
-      gamma: pdf / (spot * vol * sqrtT),
-      theta: (-(spot * pdf * vol) / (2 * sqrtT) - rate * strike * disc * normalCdf(d2)) / 365,
-      vega: spot * pdf * sqrtT / 100,
+      price: spot * dividendDisc * normalCdf(d1) - strike * rateDisc * normalCdf(d2),
+      delta: dividendDisc * normalCdf(d1),
+      gamma: (dividendDisc * pdf) / (spot * vol * sqrtT),
+      theta: (-(spot * dividendDisc * pdf * vol) / (2 * sqrtT) - rate * strike * rateDisc * normalCdf(d2) + dividend * spot * dividendDisc * normalCdf(d1)) / 365,
+      vega: spot * dividendDisc * pdf * sqrtT / 100,
     };
   }
 
   return {
-    price: strike * disc * normalCdf(-d2) - spot * normalCdf(-d1),
-    delta: normalCdf(d1) - 1,
-    gamma: pdf / (spot * vol * sqrtT),
-    theta: (-(spot * pdf * vol) / (2 * sqrtT) + rate * strike * disc * normalCdf(-d2)) / 365,
-    vega: spot * pdf * sqrtT / 100,
+    price: strike * rateDisc * normalCdf(-d2) - spot * dividendDisc * normalCdf(-d1),
+    delta: dividendDisc * (normalCdf(d1) - 1),
+    gamma: (dividendDisc * pdf) / (spot * vol * sqrtT),
+    theta: (-(spot * dividendDisc * pdf * vol) / (2 * sqrtT) + rate * strike * rateDisc * normalCdf(-d2) - dividend * spot * dividendDisc * normalCdf(-d1)) / 365,
+    vega: spot * dividendDisc * pdf * sqrtT / 100,
   };
 }
 
@@ -112,6 +113,7 @@ function readInputs() {
     days: parseNumeric(document.getElementById("days").value),
     iv: parseNumeric(document.getElementById("iv").value) / 100,
     rate: parseNumeric(document.getElementById("rate").value) / 100,
+    dividend: parseNumeric(document.getElementById("dividend").value) / 100,
     multiplier: parseNumeric(document.getElementById("multiplier").value),
   };
 }
@@ -124,6 +126,9 @@ function readLegs() {
     premium: parseNumeric(node.querySelector(".premium").value),
     qty: parseNumeric(node.querySelector(".qty").value),
     iv: parseNumeric(node.querySelector(".legIv").value) / 100,
+    bid: parseNumeric(node.querySelector(".bid").value),
+    ask: parseNumeric(node.querySelector(".ask").value),
+    openInterest: parseNumeric(node.querySelector(".openInterest").value),
   }));
 }
 
@@ -140,6 +145,7 @@ function validateStrategy(market, legs) {
   if (!Number.isFinite(market.spot) || market.spot <= 0) errors.push("Spot price must be positive.");
   if (!Number.isFinite(market.days) || market.days < 0) errors.push("Days to expiry must be zero or positive.");
   if (!Number.isFinite(market.iv) || market.iv <= 0) errors.push("Implied volatility must be positive.");
+  if (!Number.isFinite(market.dividend) || market.dividend < 0) errors.push("Dividend yield must be zero or positive.");
   if (!Number.isFinite(market.multiplier) || market.multiplier <= 0) errors.push("Contract multiplier must be positive.");
   if (!legs.length) errors.push("Add at least one leg.");
   legs.forEach((leg, index) => {
@@ -150,6 +156,8 @@ function validateStrategy(market, legs) {
     if (!Number.isFinite(leg.premium) || leg.premium < 0) errors.push(`${label}: premium/cost must be zero or positive.`);
     if (!Number.isFinite(leg.qty) || leg.qty <= 0) errors.push(`${label}: quantity must be positive.`);
     if (leg.type !== "stock" && (!Number.isFinite(leg.iv) || leg.iv <= 0)) errors.push(`${label}: leg IV must be positive.`);
+    if (leg.type !== "stock" && Number.isFinite(leg.bid) && Number.isFinite(leg.ask) && leg.ask < leg.bid) errors.push(`${label}: ask cannot be below bid.`);
+    if (leg.type !== "stock" && Number.isFinite(leg.openInterest) && leg.openInterest < 0) errors.push(`${label}: open interest cannot be negative.`);
   });
   return errors;
 }
@@ -174,7 +182,7 @@ function legMarkToModel(leg, market) {
   const q = leg.qty * market.multiplier * signed(leg);
   if (leg.type === "stock") return q * (market.spot - leg.premium);
   const years = Math.max(0, market.days) / 365;
-  const model = blackScholes(leg.type, market.spot, leg.strike, years, market.rate, leg.iv || market.iv);
+  const model = blackScholes(leg.type, market.spot, leg.strike, years, market.rate, leg.iv || market.iv, market.dividend);
   return q * (model.price - leg.premium);
 }
 
@@ -230,7 +238,7 @@ function greeks(legs, market) {
       acc.delta += leg.qty * market.multiplier * signed(leg);
       return acc;
     }
-    const model = blackScholes(leg.type, market.spot, leg.strike, market.days / 365, market.rate, leg.iv || market.iv);
+    const model = blackScholes(leg.type, market.spot, leg.strike, market.days / 365, market.rate, leg.iv || market.iv, market.dividend);
     const q = leg.qty * market.multiplier * signed(leg);
     acc.delta += model.delta * q;
     acc.gamma += model.gamma * q;
@@ -270,6 +278,15 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     <label>IV %
       <input class="legIv" type="number" step="0.1" min="0.1">
     </label>
+    <label>Bid
+      <input class="bid" type="number" step="0.01" min="0">
+    </label>
+    <label>Ask
+      <input class="ask" type="number" step="0.01" min="0">
+    </label>
+    <label>OI
+      <input class="openInterest" type="number" step="1" min="0">
+    </label>
     <button class="removeLeg" type="button" title="Remove leg">x</button>
   `;
   row.querySelector(".side").value = leg.side;
@@ -278,6 +295,9 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
   row.querySelector(".premium").value = leg.premium;
   row.querySelector(".qty").value = leg.qty;
   row.querySelector(".legIv").value = defaultIv;
+  row.querySelector(".bid").value = Number.isFinite(leg.bid) ? leg.bid : "";
+  row.querySelector(".ask").value = Number.isFinite(leg.ask) ? leg.ask : "";
+  row.querySelector(".openInterest").value = Number.isFinite(leg.openInterest) ? leg.openInterest : "";
   row.querySelector(".removeLeg").addEventListener("click", () => {
     row.remove();
     render();
@@ -299,6 +319,7 @@ function setStrategy(snapshot) {
   if (Number.isFinite(market.days)) document.getElementById("days").value = market.days;
   if (Number.isFinite(market.iv)) document.getElementById("iv").value = market.iv > 1 ? market.iv : market.iv * 100;
   if (Number.isFinite(market.rate)) document.getElementById("rate").value = market.rate > 1 ? market.rate : market.rate * 100;
+  if (Number.isFinite(market.dividend)) document.getElementById("dividend").value = market.dividend > 1 ? market.dividend : market.dividend * 100;
   if (Number.isFinite(market.multiplier)) document.getElementById("multiplier").value = market.multiplier;
   legsEl.innerHTML = "";
   (snapshot.legs || []).forEach(addLeg);
@@ -484,6 +505,7 @@ function renderSummary(market, points, risk, netGreeks) {
     ["Net Gamma", netGreeks.gamma.toFixed(3)],
     ["Spot", market.spot.toFixed(2)],
     ["Days", market.days.toFixed(0)],
+    ["Dividend Yield", `${(market.dividend * 100).toFixed(2)}%`],
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
 }
 
@@ -532,6 +554,10 @@ function renderExposure(legs, market, netGreeks) {
     return sum + ref * leg.qty * market.multiplier;
   }, 0);
   const shortContracts = optionLegs.filter((leg) => leg.side === "short").reduce((sum, leg) => sum + leg.qty, 0);
+  const enteredSpreads = optionLegs
+    .filter((leg) => Number.isFinite(leg.bid) && Number.isFinite(leg.ask))
+    .map((leg) => Math.max(0, leg.ask - leg.bid));
+  const maxSpread = enteredSpreads.length ? Math.max(...enteredSpreads) : NaN;
 
   exposureEl.innerHTML = [
     ["Gross Notional", money(grossNotional)],
@@ -541,6 +567,7 @@ function renderExposure(legs, market, netGreeks) {
     ["Delta Dollars Approx", money(netGreeks.delta * market.spot)],
     ["Vega Per 10 IV pts", money(netGreeks.vega * 10)],
     ["Theta Per Week", money(netGreeks.theta * 7)],
+    ["Max Bid/Ask Spread", Number.isFinite(maxSpread) ? `$${maxSpread.toFixed(2)}` : "not entered"],
     ["Leg Count", legs.length.toString()],
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
 }
@@ -596,6 +623,27 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
       level: "warn",
       title: "Assignment and exercise assumptions",
       text: "This prototype uses European-style Black-Scholes approximations. American-style equity options can be assigned early, especially around dividends or deep in-the-money short legs.",
+    });
+  }
+
+  const wideSpreadLegs = legs.filter((leg) => {
+    if (leg.type === "stock" || !Number.isFinite(leg.bid) || !Number.isFinite(leg.ask) || leg.premium <= 0) return false;
+    return (leg.ask - leg.bid) / leg.premium > 0.15;
+  });
+  if (wideSpreadLegs.length) {
+    blocks.push({
+      level: "warn",
+      title: "Liquidity and spread risk",
+      text: `${wideSpreadLegs.length} option leg(s) have a bid/ask spread above 15% of entered premium. A theoretical payoff can disappear if fills are poor.`,
+    });
+  }
+
+  const lowOiLegs = legs.filter((leg) => leg.type !== "stock" && Number.isFinite(leg.openInterest) && leg.openInterest > 0 && leg.openInterest < 100);
+  if (lowOiLegs.length) {
+    blocks.push({
+      level: "warn",
+      title: "Low open interest",
+      text: `${lowOiLegs.length} option leg(s) have open interest below 100. That can mean wider spreads, worse fills, and more fragile exits.`,
     });
   }
 
@@ -656,10 +704,11 @@ function exportReport() {
     `Days: ${market.days}`,
     `IV: ${(market.iv * 100).toFixed(1)}%`,
     `Rate: ${(market.rate * 100).toFixed(2)}%`,
+    `Dividend Yield: ${(market.dividend * 100).toFixed(2)}%`,
     `Multiplier: ${market.multiplier}`,
     "",
     "Legs:",
-    ...legs.map((leg, index) => `${index + 1}. ${leg.side} ${leg.qty} ${leg.type} strike=${leg.strike} premium=${leg.premium} IV=${((leg.iv || market.iv) * 100).toFixed(1)}%`),
+    ...legs.map((leg, index) => `${index + 1}. ${leg.side} ${leg.qty} ${leg.type} strike=${leg.strike} premium=${leg.premium} IV=${((leg.iv || market.iv) * 100).toFixed(1)}% bid=${Number.isFinite(leg.bid) ? leg.bid : ""} ask=${Number.isFinite(leg.ask) ? leg.ask : ""} OI=${Number.isFinite(leg.openInterest) ? leg.openInterest : ""}`),
     "",
     "Scenarios:",
     ...scenarios.map((row) => `${row.name}: spot=${row.spot.toFixed(2)}, IV=${(row.iv * 100).toFixed(1)}%, days=${row.days.toFixed(0)}, P/L=${money(row.pl)}`),
@@ -670,6 +719,66 @@ function exportReport() {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = `${market.symbol || "strategy"}-risk-report.txt`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replaceAll("\"", "\"\"")}"` : text;
+}
+
+function exportCsv() {
+  const snapshot = strategySnapshot();
+  const market = snapshot.market;
+  const legs = snapshot.legs;
+  const scenarios = scenarioRows(legs, market);
+  const lines = [
+    ["section", "field", "value", "side", "type", "strike", "premium", "qty", "iv", "bid", "ask", "open_interest", "scenario", "spot", "days", "pl"].map(csvEscape).join(","),
+    ["market", "symbol", market.symbol].map(csvEscape).join(","),
+    ["market", "spot", market.spot].map(csvEscape).join(","),
+    ["market", "days", market.days].map(csvEscape).join(","),
+    ["market", "global_iv", market.iv].map(csvEscape).join(","),
+    ["market", "rate", market.rate].map(csvEscape).join(","),
+    ["market", "dividend", market.dividend].map(csvEscape).join(","),
+    ["market", "multiplier", market.multiplier].map(csvEscape).join(","),
+    ...legs.map((leg, index) => [
+      "leg",
+      index + 1,
+      "",
+      leg.side,
+      leg.type,
+      leg.strike,
+      leg.premium,
+      leg.qty,
+      leg.iv,
+      Number.isFinite(leg.bid) ? leg.bid : "",
+      Number.isFinite(leg.ask) ? leg.ask : "",
+      Number.isFinite(leg.openInterest) ? leg.openInterest : "",
+    ].map(csvEscape).join(",")),
+    ...scenarios.map((row) => [
+      "scenario",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      row.iv,
+      "",
+      "",
+      "",
+      row.name,
+      row.spot,
+      row.days,
+      row.pl,
+    ].map(csvEscape).join(",")),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${market.symbol || "strategy"}-risk-data.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -701,6 +810,7 @@ document.getElementById("addLeg").addEventListener("click", () => {
   render();
 });
 document.getElementById("exportReport").addEventListener("click", exportReport);
+document.getElementById("exportCsv").addEventListener("click", exportCsv);
 document.getElementById("saveStrategy").addEventListener("click", saveStrategy);
 document.getElementById("loadStrategy").addEventListener("change", (event) => {
   if (event.target.files[0]) loadStrategy(event.target.files[0]);
