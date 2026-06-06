@@ -167,6 +167,7 @@ Safer positioning:
 - Add better risk classifications. Done.
 - Test with real strategies from forums.
 - Add per-leg IV or stronger flat-IV UX warning. Done.
+- Add dividend yield, manual liquidity fields, and CSV export. Done.
 
 ### Week 3
 
