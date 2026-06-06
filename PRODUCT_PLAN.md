@@ -153,17 +153,20 @@ Safer positioning:
 
 ### Week 1
 
-- Build static prototype.
-- Add 5 strategy presets.
-- Generate deterministic report.
+- Build static prototype. Done.
+- Add strategy presets. Done.
+- Generate deterministic report. Done.
+- Add exact payoff tail classification. Done.
+- Add core math tests. Done.
 - Share with 10-20 users.
 
 ### Week 2
 
-- Add save/load JSON.
-- Add report export.
-- Add better risk classifications.
+- Add save/load JSON. Done.
+- Add report export. Done.
+- Add better risk classifications. Done.
 - Test with real strategies from forums.
+- Add per-leg IV or stronger flat-IV UX warning.
 
 ### Week 3
 
@@ -195,4 +198,3 @@ Stop or pivot if:
 ## Best Next Bet
 
 Start with a browser-based educational options risk explainer. Do not integrate live data or AI until the deterministic engine feels useful.
-
