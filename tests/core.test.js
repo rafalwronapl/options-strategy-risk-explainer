@@ -26,7 +26,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, normalCdf, parseNumeric, parseOptionalNumeric, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
@@ -81,6 +81,7 @@ assert.strictEqual(coveredCallRisk.definedReward, true);
 const strangleRisk = engine.exactPayoffRisk(engine.presets.shortStrangle, { spot: 500, multiplier: 100 });
 assert.strictEqual(strangleRisk.definedRisk, false);
 assert.strictEqual(strangleRisk.upsideUnlimitedLoss, true);
+assert(engine.chartRange(engine.presets.shortStrangle, { spot: 500 }, strangleRisk).high >= 1000);
 
 const market = { symbol: "SPY", spot: 500, days: 35, iv: 0.22, rate: 0.045, dividend: 0, multiplier: 100 };
 const coveredCallReport = engine.reportBlocks(
@@ -136,5 +137,27 @@ const spreadHeavyReport = engine.reportBlocks(
   engine.scenarioRows(spreadHeavyLegs, spreadHeavyMarket)
 );
 assert(spreadHeavyReport.some((block) => block.title === "Spread cost vs max profit"));
+
+const exampleExpectations = [
+  ["iron-condor-defined-risk.json", true],
+  ["covered-call-dividend-risk.json", true],
+  ["short-strangle-unlimited-risk.json", false],
+];
+
+for (const [fileName, definedRisk] of exampleExpectations) {
+  const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "examples", fileName), "utf8"));
+  const risk = engine.exactPayoffRisk(fixture.legs, fixture.market);
+  assert.strictEqual(risk.definedRisk, definedRisk, `${fileName} definedRisk`);
+  const rows = engine.scenarioRows(fixture.legs, fixture.market);
+  assert(rows.length >= 5, `${fileName} scenarios`);
+  const report = engine.reportBlocks(
+    fixture.legs,
+    fixture.market,
+    risk,
+    engine.greeks(fixture.legs, fixture.market),
+    rows
+  );
+  assert(report.length >= 4, `${fileName} report blocks`);
+}
 
 console.log("core tests passed");

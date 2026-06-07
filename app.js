@@ -342,9 +342,21 @@ function setStrategy(snapshot) {
   render();
 }
 
-function payoffSeries(legs, market) {
-  const low = market.spot * 0.65;
-  const high = market.spot * 1.35;
+function chartRange(legs, market, risk) {
+  const strikes = legs
+    .filter((leg) => leg.type !== "stock" && Number.isFinite(leg.strike) && leg.strike > 0)
+    .map((leg) => leg.strike);
+  const maxStrike = strikes.length ? Math.max(...strikes) : market.spot;
+  const minStrike = strikes.length ? Math.min(...strikes) : market.spot;
+  const low = risk && !risk.definedRisk ? 0 : Math.max(0, Math.min(market.spot * 0.65, minStrike * 0.85));
+  const high = risk && risk.upsideUnlimitedLoss
+    ? Math.max(market.spot * 2, maxStrike * 1.75)
+    : Math.max(market.spot * 1.35, maxStrike * 1.1);
+  return { low, high };
+}
+
+function payoffSeries(legs, market, risk = null) {
+  const { low, high } = chartRange(legs, market, risk);
   const points = [];
   for (let i = 0; i <= 80; i += 1) {
     const spot = low + ((high - low) * i) / 80;
@@ -845,8 +857,8 @@ function render() {
   showValidation(errors);
   if (errors.length) return;
 
-  const points = payoffSeries(legs, market);
   const risk = exactPayoffRisk(legs, market);
+  const points = payoffSeries(legs, market, risk);
   const netGreeks = greeks(legs, market);
   const scenarios = scenarioRows(legs, market);
   const breakevenPoints = breakEvens(legs, market);
