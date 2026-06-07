@@ -56,6 +56,8 @@ Validation details are documented in [VALIDATION.md](VALIDATION.md).
 
 See [CHANGELOG.md](CHANGELOG.md) for the current prototype feature set.
 
+Security notes are in [SECURITY.md](SECURITY.md).
+
 ## Not In Scope Yet
 
 - Trading signals.

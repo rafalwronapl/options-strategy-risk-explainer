@@ -184,7 +184,7 @@ function validateStrategy(market, legs) {
 
 function showValidation(errors) {
   validationEl.hidden = errors.length === 0;
-  validationEl.innerHTML = errors.map((error) => `<div>${error}</div>`).join("");
+  validationEl.innerHTML = errors.map((error) => `<div>${escapeHtml(error)}</div>`).join("");
 }
 
 function signed(leg) {
