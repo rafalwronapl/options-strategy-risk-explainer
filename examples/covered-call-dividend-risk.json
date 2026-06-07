@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "market": {
+    "symbol": "DIV",
+    "spot": 100,
+    "days": 18,
+    "iv": 0.28,
+    "rate": 0.04,
+    "dividend": 0.035,
+    "multiplier": 100
+  },
+  "legs": [
+    { "side": "long", "type": "stock", "strike": 0, "premium": 100, "qty": 1, "iv": 0.28 },
+    { "side": "short", "type": "call", "strike": 105, "premium": 1.8, "qty": 1, "iv": 0.26, "bid": 1.65, "ask": 2.05, "openInterest": 72 }
+  ]
+}
+

@@ -14,6 +14,12 @@ Open `index.html` in a browser.
 
 No install, no API keys, no backend.
 
+Use `Load JSON` with files from `examples/` to test known structures:
+
+- `iron-condor-defined-risk.json`
+- `short-strangle-unlimited-risk.json`
+- `covered-call-dividend-risk.json`
+
 ## Development
 
 ```bash

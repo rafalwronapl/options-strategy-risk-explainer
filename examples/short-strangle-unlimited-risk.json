@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "market": {
+    "symbol": "SPY",
+    "spot": 500,
+    "days": 21,
+    "iv": 0.24,
+    "rate": 0.045,
+    "dividend": 0,
+    "multiplier": 100
+  },
+  "legs": [
+    { "side": "short", "type": "put", "strike": 465, "premium": 5.8, "qty": 1, "iv": 0.27, "bid": 5.6, "ask": 6, "openInterest": 600 },
+    { "side": "short", "type": "call", "strike": 535, "premium": 6.4, "qty": 1, "iv": 0.25, "bid": 6.1, "ask": 6.8, "openInterest": 480 }
+  ]
+}
+
