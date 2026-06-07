@@ -2,7 +2,7 @@
   "name": "derivatives-risk-explainer",
   "version": "0.1.0",
   "private": true,
-  "description": "Deterministic options risk explainer prototype.",
+  "description": "Deterministic options strategy risk explainer prototype.",
   "scripts": {
     "check": "node --check app.js && node tests/core.test.js",
     "test": "node tests/core.test.js"
@@ -15,4 +15,3 @@
   ],
   "license": "UNLICENSED"
 }
-

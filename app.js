@@ -117,6 +117,15 @@ function parseOptionalNumeric(value) {
   return Number(text.replace(",", "."));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function readInputs() {
   return {
     symbol: document.getElementById("symbol").value.trim() || "UNDERLYING",
@@ -646,7 +655,7 @@ function renderPositionSummary(legs, market) {
     ["Structure Type", shortOptions.length && longOptions.length ? "multi-leg spread" : shortOptions.length ? "short premium" : "long premium / stock"],
   ];
   positionSummaryEl.innerHTML = rows.map(([label, value]) => `
-    <div class="summaryItem"><span>${label}</span><strong>${value}</strong></div>
+    <div class="summaryItem"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
   `).join("");
 }
 
@@ -658,11 +667,12 @@ function renderTailRisk(legs, market, risk) {
   });
   const rows = [
     ["Upside payoff slope", `${money(upSlope)} per $1 underlying move`],
+    ["Upside +$10 move impact", `${money(upSlope * 10)} per +$10 underlying move`],
     ["Risk Classification", risk.definedRisk ? "Defined payoff risk" : "Unlimited loss risk"],
     ...checkpoints.map((row) => [row.label, `${money(row.pl)} at spot ${row.spot.toFixed(2)}`]),
   ];
   tailRiskEl.innerHTML = rows.map(([label, value]) => `
-    <div class="summaryItem"><span>${label}</span><strong>${value}</strong></div>
+    <div class="summaryItem"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
   `).join("");
 }
 
@@ -677,7 +687,7 @@ function renderPrintInputs(legs, market) {
         ["Rate", `${(market.rate * 100).toFixed(2)}%`],
         ["Dividend", `${(market.dividend * 100).toFixed(2)}%`],
         ["Multiplier", market.multiplier.toFixed(0)],
-      ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("")}
+      ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}
     </div>
     <div class="tableWrap inputTable">
       <table>
@@ -689,16 +699,16 @@ function renderPrintInputs(legs, market) {
         <tbody>
           ${legs.map((leg, index) => `
             <tr>
-              <td>${index + 1}</td>
-              <td>${leg.side}</td>
-              <td>${leg.type}</td>
-              <td>${leg.type === "stock" ? "" : leg.strike}</td>
-              <td>${leg.premium}</td>
-              <td>${leg.qty}</td>
-              <td>${leg.type === "stock" ? "" : `${((leg.iv || market.iv) * 100).toFixed(1)}%`}</td>
-              <td>${Number.isFinite(leg.bid) ? leg.bid : ""}</td>
-              <td>${Number.isFinite(leg.ask) ? leg.ask : ""}</td>
-              <td>${Number.isFinite(leg.openInterest) ? leg.openInterest : ""}</td>
+              <td>${escapeHtml(index + 1)}</td>
+              <td>${escapeHtml(leg.side)}</td>
+              <td>${escapeHtml(leg.type)}</td>
+              <td>${escapeHtml(leg.type === "stock" ? "" : leg.strike)}</td>
+              <td>${escapeHtml(leg.premium)}</td>
+              <td>${escapeHtml(leg.qty)}</td>
+              <td>${escapeHtml(leg.type === "stock" ? "" : `${((leg.iv || market.iv) * 100).toFixed(1)}%`)}</td>
+              <td>${escapeHtml(Number.isFinite(leg.bid) ? leg.bid : "")}</td>
+              <td>${escapeHtml(Number.isFinite(leg.ask) ? leg.ask : "")}</td>
+              <td>${escapeHtml(Number.isFinite(leg.openInterest) ? leg.openInterest : "")}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -778,7 +788,7 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
     blocks.push({
       level: "warn",
       title: "Spread cost vs max profit",
-      text: `Estimated full bid/ask width across entered legs is ${money(spreadCost)}, which is more than 20% of max expiry profit. Execution quality may dominate the structure.`,
+      text: `Estimated full bid/ask width across entered legs is ${money(spreadCost)}, which is more than 20% of max expiry profit. This is a conservative friction indicator, not a forecast of actual slippage. Execution quality may dominate the structure.`,
     });
   }
 
@@ -840,12 +850,12 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
 
 function renderReport(blocks) {
   riskFlagsEl.innerHTML = blocks.map((block) => `
-    <span class="riskFlag ${block.level}">${block.title}</span>
+    <span class="riskFlag ${escapeHtml(block.level)}">${escapeHtml(block.title)}</span>
   `).join("");
   reportEl.innerHTML = blocks.map((block) => `
-    <div class="reportBlock ${block.level}">
-      <strong>${block.title}</strong>
-      <span>${block.text}</span>
+    <div class="reportBlock ${escapeHtml(block.level)}">
+      <strong>${escapeHtml(block.title)}</strong>
+      <span>${escapeHtml(block.text)}</span>
     </div>
   `).join("");
 }
@@ -881,7 +891,7 @@ function exportReport() {
   const scenarios = scenarioRows(legs, market);
   const generatedAt = new Date().toISOString();
   const text = [
-    `Derivatives Risk Explainer Report`,
+    `Options Strategy Risk Explainer Report`,
     `Generated: ${generatedAt}`,
     `Symbol: ${market.symbol}`,
     `Spot: ${market.spot}`,

@@ -1,6 +1,6 @@
 # Disclaimer
 
-This project is an educational derivatives risk analysis prototype.
+This project is an educational options strategy risk analysis prototype.
 
 It is not investment advice, legal advice, tax advice, brokerage advice, or a recommendation to buy, sell, hold, write, hedge, or exercise any financial instrument.
 
@@ -38,4 +38,3 @@ It does not model:
 All outputs depend on user-entered assumptions. Incorrect inputs produce incorrect outputs.
 
 Use the tool only as a way to inspect assumptions, payoff shape, liquidity warnings, and scenario sensitivity. Verify any real trade with broker tools, exchange contract specifications, and qualified professionals where appropriate.
-

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Derivatives Risk Explainer</title>
+  <title>Options Strategy Risk Explainer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1>Derivatives Risk Explainer</h1>
-      <p>Build an options structure and see the risk before the trade.</p>
+      <h1>Options Strategy Risk Explainer</h1>
+      <p>Build an options structure and inspect payoff, scenarios, liquidity, and tail risk.</p>
     </div>
     <div class="topActions">
       <button id="saveStrategy" type="button">Save JSON</button>
@@ -155,6 +155,7 @@
         <div><strong>Expiry payoff risk</strong> is calculated from entered legs at expiration and assumes the underlying price cannot go below zero.</div>
         <div><strong>Mark-to-model scenarios</strong> are estimated with Black-Scholes and are not maximum-loss or maximum-profit limits.</div>
         <div><strong>Liquidity warnings</strong> use manually entered bid, ask, and open interest. Missing or stale market data can invalidate execution conclusions.</div>
+        <div><strong>Spread cost</strong> uses full bid/ask width across entered option legs as a conservative friction indicator, not as expected slippage.</div>
         <div><strong>Broker margin and assignment</strong> are warnings only. The prototype does not calculate broker-specific requirements.</div>
       </div>
     </section>

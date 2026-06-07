@@ -52,5 +52,5 @@ The current math is appropriate for an educational prototype, not for production
 - One expiration is assumed in the UI.
 - Per-leg IV is manual, not sourced from a volatility surface.
 - Liquidity data is manual and not time-stamped.
+- Spread cost is full bid/ask width, not expected slippage.
 - Broker margin is not calculated.
-

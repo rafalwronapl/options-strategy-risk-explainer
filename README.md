@@ -1,12 +1,12 @@
-# Derivatives Risk Explainer
+# Options Strategy Risk Explainer
 
-Prototype of an educational options risk explainer.
+Prototype of an educational options strategy risk explainer.
 
 The product angle is deliberately not "AI tells you what to trade". The core idea is:
 
-> Deterministic math engine first. AI only explains calculated risk.
+> Deterministic math engine first. AI, if added later, only explains calculated risk.
 
-This static prototype runs locally in a browser and lets a user build a multi-leg option strategy, inspect payoff, Greeks, stress scenarios, and a plain-language risk report.
+This static prototype runs locally in a browser and lets a user build a multi-leg option strategy, inspect payoff, Greeks, stress scenarios, liquidity warnings, tail risk, and a plain-language risk report.
 
 ## Run
 

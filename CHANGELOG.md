@@ -2,7 +2,7 @@
 
 ## 0.1.0
 
-Initial early prototype.
+Initial early options strategy risk prototype.
 
 ### Added
 
@@ -56,4 +56,3 @@ Initial early prototype.
 - No live market data.
 - No broker margin engine.
 - No American exercise valuation.
-

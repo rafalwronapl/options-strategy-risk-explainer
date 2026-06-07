@@ -26,7 +26,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, escapeHtml, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
@@ -35,6 +35,7 @@ assert.strictEqual(engine.parseNumeric("4,5"), 4.5);
 assert.strictEqual(engine.parseNumeric("4.5"), 4.5);
 assert(Number.isNaN(engine.parseOptionalNumeric("")));
 assert.strictEqual(engine.parseOptionalNumeric("1,25"), 1.25);
+assert.strictEqual(engine.escapeHtml('<img src=x onerror=1>&"'), "&lt;img src=x onerror=1&gt;&amp;&quot;");
 assert.strictEqual(engine.csvEscape('a,"b"'), '"a,""b"""');
 
 const call = engine.blackScholes("call", 100, 100, 1, 0.05, 0.2);

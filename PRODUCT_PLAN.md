@@ -135,7 +135,7 @@ The LLM may only explain:
 
 Possible names:
 
-- Derivatives Risk Explainer
+- Options Strategy Risk Explainer
 - Options Risk Officer
 - Strategy Risk Lens
 - Risk Before Trade
@@ -147,7 +147,7 @@ Best short positioning:
 
 Safer positioning:
 
-> Educational derivatives risk analysis. No signals. No recommendations.
+> Educational options strategy risk analysis. No signals. No recommendations.
 
 ## 30-Day Execution Plan
 
