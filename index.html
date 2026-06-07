@@ -150,6 +150,16 @@
     </section>
 
     <section class="panel">
+      <h2>Methodology Boundary</h2>
+      <div class="assumptions">
+        <div><strong>Expiry payoff risk</strong> is calculated from entered legs at expiration and assumes the underlying price cannot go below zero.</div>
+        <div><strong>Mark-to-model scenarios</strong> are estimated with Black-Scholes and are not maximum-loss or maximum-profit limits.</div>
+        <div><strong>Liquidity warnings</strong> use manually entered bid, ask, and open interest. Missing or stale market data can invalidate execution conclusions.</div>
+        <div><strong>Broker margin and assignment</strong> are warnings only. The prototype does not calculate broker-specific requirements.</div>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>Risk Officer Report</h2>
       <div id="riskFlags" class="riskFlags"></div>
       <div id="riskReport" class="report"></div>

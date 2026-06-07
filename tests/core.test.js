@@ -83,6 +83,39 @@ assert.strictEqual(strangleRisk.definedRisk, false);
 assert.strictEqual(strangleRisk.upsideUnlimitedLoss, true);
 assert(engine.chartRange(engine.presets.shortStrangle, { spot: 500 }, strangleRisk).high >= 1000);
 
+const stockOnly = [{ side: "long", type: "stock", strike: 0, premium: 100, qty: 1 }];
+const stockOnlyRisk = engine.exactPayoffRisk(stockOnly, { spot: 100, multiplier: 100 });
+assert.strictEqual(stockOnlyRisk.definedRisk, true);
+assert.strictEqual(stockOnlyRisk.definedReward, false);
+assert.strictEqual(stockOnlyRisk.min, -10000);
+assert.strictEqual(engine.breakEvens(stockOnly, { spot: 100, multiplier: 100 })[0], 100);
+
+const shortPut = [{ side: "short", type: "put", strike: 95, premium: 3, qty: 1 }];
+const shortPutRisk = engine.exactPayoffRisk(shortPut, { spot: 100, multiplier: 100 });
+assert.strictEqual(shortPutRisk.definedRisk, true);
+assert.strictEqual(shortPutRisk.definedReward, true);
+assert.strictEqual(shortPutRisk.min, -9200);
+assert.strictEqual(shortPutRisk.max, 300);
+assert.strictEqual(engine.breakEvens(shortPut, { spot: 100, multiplier: 100 })[0], 92);
+
+const collarRisk = engine.exactPayoffRisk(engine.presets.collar, { spot: 500, multiplier: 100 });
+assert.strictEqual(collarRisk.definedRisk, true);
+assert.strictEqual(collarRisk.definedReward, true);
+
+const ratioRisk = engine.exactPayoffRisk(engine.presets.ratioCallSpread, { spot: 500, multiplier: 100 });
+assert.strictEqual(ratioRisk.definedRisk, false);
+assert.strictEqual(ratioRisk.upsideUnlimitedLoss, true);
+
+const brokenWingCondor = [
+  { side: "long", type: "put", strike: 450, premium: 1, qty: 1 },
+  { side: "short", type: "put", strike: 470, premium: 4, qty: 1 },
+  { side: "short", type: "call", strike: 530, premium: 4, qty: 1 },
+  { side: "long", type: "call", strike: 560, premium: 1, qty: 1 },
+];
+const brokenWingRisk = engine.exactPayoffRisk(brokenWingCondor, { spot: 500, multiplier: 100 });
+assert.strictEqual(brokenWingRisk.definedRisk, true);
+assert.strictEqual(brokenWingRisk.definedReward, true);
+
 const market = { symbol: "SPY", spot: 500, days: 35, iv: 0.22, rate: 0.045, dividend: 0, multiplier: 100 };
 const coveredCallReport = engine.reportBlocks(
   engine.presets.coveredCall,
