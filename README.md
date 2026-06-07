@@ -1,5 +1,10 @@
 # Options Strategy Risk Explainer
 
+[![CI](https://github.com/rafalwronapl/options-strategy-risk-explainer/actions/workflows/ci.yml/badge.svg)](https://github.com/rafalwronapl/options-strategy-risk-explainer/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/rafalwronapl/options-strategy-risk-explainer/actions/workflows/codeql.yml/badge.svg)](https://github.com/rafalwronapl/options-strategy-risk-explainer/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node 24](https://img.shields.io/badge/Node-24-green.svg)](package.json)
+
 Prototype of an educational options strategy risk explainer.
 
 The product angle is deliberately not "AI tells you what to trade". The core idea is:
@@ -7,6 +12,23 @@ The product angle is deliberately not "AI tells you what to trade". The core ide
 > Deterministic math engine first. AI, if added later, only explains calculated risk.
 
 This static prototype runs locally in a browser and lets a user build a multi-leg option strategy, inspect payoff, Greeks, stress scenarios, liquidity warnings, tail risk, strategy education notes, and a plain-language risk report.
+
+## Why This Matters
+
+Options tools often blur the line between calculation, education, and trading
+advice. This prototype keeps that boundary explicit: deterministic calculations
+produce payoff, Greeks, stress rows, and risk labels; explanatory text only
+describes those calculated outputs.
+
+That makes the project useful as a browser-only risk explainer and as a clean
+foundation for any future AI layer that must stay source-backed.
+
+## Demo
+
+Open `index.html` locally, then load one of the sample strategies from
+`examples/`.
+
+![Options strategy risk explainer screenshot](docs/screenshots/options-risk-explainer.png)
 
 ## Run
 
