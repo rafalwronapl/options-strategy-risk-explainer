@@ -1,5 +1,5 @@
 {
-  "name": "derivatives-risk-explainer",
+  "name": "options-strategy-risk-explainer",
   "version": "0.1.0",
   "private": true,
   "description": "Deterministic options strategy risk explainer prototype.",
@@ -10,7 +10,7 @@
   "keywords": [
     "options",
     "risk",
-    "derivatives",
+    "options-strategies",
     "education"
   ],
   "license": "UNLICENSED"

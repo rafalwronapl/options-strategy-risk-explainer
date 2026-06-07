@@ -4,7 +4,7 @@
 
 The market is crowded with option screeners, strategy builders, backtesters, and trading bots. The more defensible product is a risk explainer:
 
-> Paste or build a derivatives position. The system shows what can go wrong before the user trades.
+> Paste or build an options strategy. The system shows what can go wrong before the user trades.
 
 The product should avoid recommendations and operate as education, risk analysis, and decision support.
 
@@ -54,7 +54,7 @@ This space is risky if it promises trade selection. The safer wedge is AI as exp
 
 The product should own this narrow promise:
 
-> Explain my derivatives risk like a risk officer, using numbers I can inspect.
+> Explain my options strategy risk like a risk officer, using numbers I can inspect.
 
 The wedge:
 
