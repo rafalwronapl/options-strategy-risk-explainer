@@ -58,6 +58,8 @@ See [CHANGELOG.md](CHANGELOG.md) for the current prototype feature set.
 
 Security notes are in [SECURITY.md](SECURITY.md).
 
+The code is released under the [MIT License](LICENSE).
+
 ## Not In Scope Yet
 
 - Trading signals.
