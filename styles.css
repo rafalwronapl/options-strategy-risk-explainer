@@ -290,6 +290,23 @@ canvas {
   font-weight: 650;
 }
 
+.quickStart {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f5fbfa;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.quickStart strong {
+  color: var(--ink);
+}
+
 .metric span {
   display: block;
   color: var(--muted);

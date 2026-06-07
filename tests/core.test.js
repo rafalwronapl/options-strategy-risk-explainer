@@ -37,6 +37,8 @@ assert(Number.isNaN(engine.parseOptionalNumeric("")));
 assert.strictEqual(engine.parseOptionalNumeric("1,25"), 1.25);
 assert.strictEqual(engine.escapeHtml('<img src=x onerror=1>&"'), "&lt;img src=x onerror=1&gt;&amp;&quot;");
 assert.strictEqual(engine.csvEscape('a,"b"'), '"a,""b"""');
+assert.strictEqual(engine.csvEscape("=cmd"), "'=cmd");
+assert.strictEqual(engine.csvEscape("+SUM(A1:A2)"), "'+SUM(A1:A2)");
 
 const call = engine.blackScholes("call", 100, 100, 1, 0.05, 0.2);
 assert(Math.abs(call.price - 10.45) < 0.08, `call price was ${call.price}`);

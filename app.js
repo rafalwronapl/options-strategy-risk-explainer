@@ -929,7 +929,10 @@ function printReport() {
 }
 
 function csvEscape(value) {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`;
+  }
   return /[",\n]/.test(text) ? `"${text.replaceAll("\"", "\"\"")}"` : text;
 }
 
