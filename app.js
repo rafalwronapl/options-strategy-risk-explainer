@@ -7,6 +7,8 @@ const exposureEl = document.getElementById("exposure");
 const comparisonEl = document.getElementById("comparison");
 const positionSummaryEl = document.getElementById("positionSummary");
 const riskFlagsEl = document.getElementById("riskFlags");
+const printInputsEl = document.getElementById("printInputs");
+const tailRiskEl = document.getElementById("tailRisk");
 const chart = document.getElementById("payoffChart");
 const ctx = chart.getContext("2d");
 
@@ -590,6 +592,7 @@ function renderExposure(legs, market, netGreeks) {
     .filter((leg) => Number.isFinite(leg.bid) && Number.isFinite(leg.ask))
     .map((leg) => Math.max(0, leg.ask - leg.bid));
   const maxSpread = enteredSpreads.length ? Math.max(...enteredSpreads) : NaN;
+  const spreadCost = liquiditySpreadCost(legs, market);
 
   exposureEl.innerHTML = [
     ["Gross Notional", money(grossNotional)],
@@ -600,8 +603,17 @@ function renderExposure(legs, market, netGreeks) {
     ["Vega Per 10 IV pts", money(netGreeks.vega * 10)],
     ["Theta Per Week", money(netGreeks.theta * 7)],
     ["Max Bid/Ask Spread", Number.isFinite(maxSpread) ? `$${maxSpread.toFixed(2)}` : "not entered"],
+    ["Est. Spread Cost", Number.isFinite(spreadCost) ? money(spreadCost) : "not entered"],
     ["Leg Count", legs.length.toString()],
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function liquiditySpreadCost(legs, market) {
+  const costs = legs
+    .filter((leg) => leg.type !== "stock" && Number.isFinite(leg.bid) && Number.isFinite(leg.ask))
+    .map((leg) => Math.max(0, leg.ask - leg.bid) * leg.qty * market.multiplier);
+  if (!costs.length) return NaN;
+  return costs.reduce((sum, value) => sum + value, 0);
 }
 
 function renderPositionSummary(legs, market) {
@@ -626,32 +638,90 @@ function renderPositionSummary(legs, market) {
   `).join("");
 }
 
+function renderTailRisk(legs, market, risk) {
+  const upSlope = payoffSlopeAtInfinity(legs, "up", market.multiplier);
+  const checkpoints = [2, 3, 5].map((multiple) => {
+    const spot = market.spot * multiple;
+    return { label: `${multiple}x spot`, spot, pl: totalPayoff(legs, spot, market.multiplier) };
+  });
+  const rows = [
+    ["Upside payoff slope", `${money(upSlope)} per $1 underlying move`],
+    ["Risk Classification", risk.definedRisk ? "Defined payoff risk" : "Unlimited loss risk"],
+    ...checkpoints.map((row) => [row.label, `${money(row.pl)} at spot ${row.spot.toFixed(2)}`]),
+  ];
+  tailRiskEl.innerHTML = rows.map(([label, value]) => `
+    <div class="summaryItem"><span>${label}</span><strong>${value}</strong></div>
+  `).join("");
+}
+
+function renderPrintInputs(legs, market) {
+  printInputsEl.innerHTML = `
+    <div class="summaryGrid">
+      ${[
+        ["Symbol", market.symbol],
+        ["Spot", market.spot.toFixed(2)],
+        ["Days", market.days.toFixed(0)],
+        ["Global IV", `${(market.iv * 100).toFixed(1)}%`],
+        ["Rate", `${(market.rate * 100).toFixed(2)}%`],
+        ["Dividend", `${(market.dividend * 100).toFixed(2)}%`],
+        ["Multiplier", market.multiplier.toFixed(0)],
+      ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("")}
+    </div>
+    <div class="tableWrap inputTable">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Side</th><th>Type</th><th>Strike</th><th>Premium</th><th>Qty</th><th>IV</th><th>Bid</th><th>Ask</th><th>OI</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${legs.map((leg, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${leg.side}</td>
+              <td>${leg.type}</td>
+              <td>${leg.type === "stock" ? "" : leg.strike}</td>
+              <td>${leg.premium}</td>
+              <td>${leg.qty}</td>
+              <td>${leg.type === "stock" ? "" : `${((leg.iv || market.iv) * 100).toFixed(1)}%`}</td>
+              <td>${Number.isFinite(leg.bid) ? leg.bid : ""}</td>
+              <td>${Number.isFinite(leg.ask) ? leg.ask : ""}</td>
+              <td>${Number.isFinite(leg.openInterest) ? leg.openInterest : ""}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function reportBlocks(legs, market, risk, netGreeks, scenarios) {
   const hasShortOption = legs.some((leg) => leg.side === "short" && leg.type !== "stock");
   const hasShortGamma = netGreeks.gamma < -0.05;
   const nearExpiry = market.days <= 7;
   const worst = scenarios.reduce((a, b) => (a.pl < b.pl ? a : b));
   const blocks = [];
+  const spreadCost = liquiditySpreadCost(legs, market);
 
   const shockRows = scenarios.filter((row) => row.name !== "Base");
   const strongestShock = shockRows.reduce((a, b) => (Math.abs(a.delta) > Math.abs(b.delta) ? a : b));
 
   blocks.push({
     level: "",
-    title: "What this position mainly depends on",
-    text: `Net delta is ${netGreeks.delta.toFixed(1)}, theta is ${money(netGreeks.theta)} per day, and vega is ${money(netGreeks.vega)} per 1 IV point. The largest displayed shock is ${strongestShock.name}, moving mark-to-model P/L by ${money(strongestShock.delta)} from the base case.`,
+    title: "Mark-to-model scenario risk",
+    text: `Net delta is ${netGreeks.delta.toFixed(1)}, theta is ${money(netGreeks.theta)} per day, and vega is ${money(netGreeks.vega)} per 1 IV point. The largest displayed model shock is ${strongestShock.name}, moving estimated mark-to-model P/L by ${money(strongestShock.delta)} from the base case. These scenarios are not payoff limits.`,
   });
 
   if (!risk.definedRisk) {
     blocks.push({
       level: "danger",
-      title: "Unlimited loss risk",
+      title: "Expiry payoff risk: unlimited loss",
       text: "The exact payoff classification shows loss can continue in at least one tail. This is not a small detail: a gap move, volatility spike, or margin change can dominate the trade.",
     });
   } else {
     blocks.push({
       level: "",
-      title: "Defined payoff risk",
+      title: "Expiry payoff risk: defined",
       text: "The option payoff is defined by the entered legs. This still depends on correct fills, contract multiplier, assignment assumptions, liquidity, transaction costs, and broker margin.",
     });
   }
@@ -689,6 +759,14 @@ function reportBlocks(legs, market, risk, netGreeks, scenarios) {
       level: "warn",
       title: "Liquidity and spread risk",
       text: `${wideSpreadLegs.length} option leg(s) have a bid/ask spread above 15% of entered premium. A theoretical payoff can disappear if fills are poor.`,
+    });
+  }
+
+  if (Number.isFinite(spreadCost) && Number.isFinite(risk.max) && risk.max > 0 && spreadCost / risk.max > 0.2) {
+    blocks.push({
+      level: "warn",
+      title: "Spread cost vs max profit",
+      text: `Estimated full bid/ask width across entered legs is ${money(spreadCost)}, which is more than 20% of max expiry profit. Execution quality may dominate the structure.`,
     });
   }
 
@@ -779,6 +857,8 @@ function render() {
   renderComparison(scenarios, market);
   renderExposure(legs, market, netGreeks);
   renderPositionSummary(legs, market);
+  renderPrintInputs(legs, market);
+  renderTailRisk(legs, market, risk);
   renderReport(reportBlocks(legs, market, risk, netGreeks, scenarios));
 }
 

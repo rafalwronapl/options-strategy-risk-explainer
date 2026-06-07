@@ -90,7 +90,7 @@ const coveredCallReport = engine.reportBlocks(
   engine.greeks(engine.presets.coveredCall, market),
   engine.scenarioRows(engine.presets.coveredCall, market)
 );
-assert(!coveredCallReport.some((block) => block.title === "Unlimited loss risk"));
+assert(!coveredCallReport.some((block) => block.title === "Expiry payoff risk: unlimited loss"));
 
 const strangleReport = engine.reportBlocks(
   engine.presets.shortStrangle,
@@ -99,7 +99,7 @@ const strangleReport = engine.reportBlocks(
   engine.greeks(engine.presets.shortStrangle, market),
   engine.scenarioRows(engine.presets.shortStrangle, market)
 );
-assert(strangleReport.some((block) => block.title === "Unlimited loss risk"));
+assert(strangleReport.some((block) => block.title === "Expiry payoff risk: unlimited loss"));
 
 const missingLiquidityReport = engine.reportBlocks(
   engine.presets.ironCondor,
@@ -121,5 +121,20 @@ const badMarketReport = engine.reportBlocks(
 );
 assert(badMarketReport.some((block) => block.title === "Entered premium outside bid/ask"));
 assert(badMarketReport.some((block) => block.title === "Zero open interest"));
+
+const spreadHeavyLegs = [
+  { side: "long", type: "call", strike: 100, premium: 1, qty: 1, iv: 0.2, bid: 0.5, ask: 1.5, openInterest: 200 },
+  { side: "short", type: "call", strike: 102, premium: 0.4, qty: 1, iv: 0.2, bid: 0.1, ask: 0.7, openInterest: 200 },
+];
+const spreadHeavyMarket = { spot: 100, days: 20, iv: 0.2, rate: 0.04, dividend: 0, multiplier: 100 };
+const spreadHeavyRisk = engine.exactPayoffRisk(spreadHeavyLegs, spreadHeavyMarket);
+const spreadHeavyReport = engine.reportBlocks(
+  spreadHeavyLegs,
+  spreadHeavyMarket,
+  spreadHeavyRisk,
+  engine.greeks(spreadHeavyLegs, spreadHeavyMarket),
+  engine.scenarioRows(spreadHeavyLegs, spreadHeavyMarket)
+);
+assert(spreadHeavyReport.some((block) => block.title === "Spread cost vs max profit"));
 
 console.log("core tests passed");

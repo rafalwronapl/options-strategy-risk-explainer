@@ -251,6 +251,11 @@ canvas {
   gap: 8px;
 }
 
+.tailRisk {
+  display: grid;
+  gap: 10px;
+}
+
 .summaryItem {
   display: flex;
   justify-content: space-between;
@@ -317,6 +322,10 @@ canvas {
 
 .tableWrap {
   overflow-x: auto;
+}
+
+.printInputs {
+  display: none;
 }
 
 table {
@@ -506,11 +515,18 @@ th {
   }
 
   .topActions,
-  .controls,
   .buttonRow,
   .removeLeg,
   .advancedLeg {
     display: none !important;
+  }
+
+  .controls {
+    display: none !important;
+  }
+
+  .printInputs {
+    display: block;
   }
 
   .layout {
