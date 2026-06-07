@@ -54,6 +54,8 @@ Read [DISCLAIMER.md](DISCLAIMER.md) before using the prototype for any real-worl
 
 Validation details are documented in [VALIDATION.md](VALIDATION.md).
 
+See [CHANGELOG.md](CHANGELOG.md) for the current prototype feature set.
+
 ## Not In Scope Yet
 
 - Trading signals.
