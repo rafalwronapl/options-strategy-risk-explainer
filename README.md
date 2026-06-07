@@ -6,7 +6,7 @@ The product angle is deliberately not "AI tells you what to trade". The core ide
 
 > Deterministic math engine first. AI, if added later, only explains calculated risk.
 
-This static prototype runs locally in a browser and lets a user build a multi-leg option strategy, inspect payoff, Greeks, stress scenarios, liquidity warnings, tail risk, and a plain-language risk report.
+This static prototype runs locally in a browser and lets a user build a multi-leg option strategy, inspect payoff, Greeks, stress scenarios, liquidity warnings, tail risk, strategy education notes, and a plain-language risk report.
 
 ## Run
 
@@ -38,7 +38,10 @@ The project is intentionally dependency-light. The prototype is plain HTML/CSS/J
 - Net Greeks estimate.
 - Stress scenarios across price, IV, and time.
 - Deterministic risk officer report.
+- Quick risk summary near the strategy builder.
+- Selected-strategy education notes and mini-lessons.
 - Save/load strategy JSON.
+- Basic schema validation and size limit for loaded strategy JSON.
 - Text risk report export.
 - Browser Print/PDF report mode.
 - Strategy vs underlying comparison.

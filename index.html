@@ -71,6 +71,17 @@
         <button data-preset="ratioCallSpread" type="button">Ratio Call Spread</button>
       </div>
 
+      <div id="quickRiskSummary" class="quickRiskSummary" aria-live="polite"></div>
+
+      <section class="educationCard" aria-live="polite">
+        <div>
+          <span>Selected Strategy Education</span>
+          <h3 id="strategyEducationTitle">Strategy</h3>
+        </div>
+        <p id="strategyEducationBody"></p>
+        <div id="strategyEducationChecks" class="checkList"></div>
+      </section>
+
       <div class="sectionTitle">
         <h2>Legs</h2>
         <button id="addLeg" type="button">Add Leg</button>
@@ -162,6 +173,28 @@
         <div><strong>Liquidity warnings</strong> use manually entered bid, ask, and open interest. Missing or stale market data can invalidate execution conclusions.</div>
         <div><strong>Spread cost</strong> uses full bid/ask width across entered option legs as a conservative friction indicator, not as expected slippage.</div>
         <div><strong>Broker margin and assignment</strong> are warnings only. The prototype does not calculate broker-specific requirements.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Mini-Lessons: How To Read The Output</h2>
+      <div class="educationGrid">
+        <details open>
+          <summary>What should I check first?</summary>
+          <p>Start with maximum loss, breakeven, tail risk, and liquidity warnings. Greeks matter, but they can create false confidence if the payoff and tail are not understood first.</p>
+        </details>
+        <details>
+          <summary>Why can short strangles be dangerous?</summary>
+          <p>A short strangle can collect small premiums while markets are calm, then lose quickly in a large move. The central part of the chart may look stable while the real danger sits in the tail.</p>
+        </details>
+        <details>
+          <summary>What does theta not tell me?</summary>
+          <p>Theta estimates time decay. Positive theta does not mean the position is safe. Short premium can have positive theta while also carrying negative gamma and large move risk.</p>
+        </details>
+        <details>
+          <summary>Why do bid/ask and open interest matter?</summary>
+          <p>Theoretical payoff can look attractive, but wide bid/ask spreads or low open interest can erase edge and make exits difficult.</p>
+        </details>
       </div>
     </section>
 

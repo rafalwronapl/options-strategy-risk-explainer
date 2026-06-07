@@ -26,7 +26,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, escapeHtml, csvEscape, presets, greeks, scenarioRows, reportBlocks };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, escapeHtml, csvEscape, presets, greeks, scenarioRows, reportBlocks, validateLoadedSnapshot };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
@@ -39,6 +39,11 @@ assert.strictEqual(engine.escapeHtml('<img src=x onerror=1>&"'), "&lt;img src=x 
 assert.strictEqual(engine.csvEscape('a,"b"'), '"a,""b"""');
 assert.strictEqual(engine.csvEscape("=cmd"), "'=cmd");
 assert.strictEqual(engine.csvEscape("+SUM(A1:A2)"), "'+SUM(A1:A2)");
+assert.strictEqual("putCalendarApprox" in engine.presets, false);
+assert(engine.validateLoadedSnapshot(null).some((error) => error.includes("object")));
+assert(engine.validateLoadedSnapshot({ market: {}, legs: [] }).length === 0);
+assert(engine.validateLoadedSnapshot({ market: {}, legs: [{ side: "bad", type: "call", strike: 100, premium: 1, qty: 1 }] }).some((error) => error.includes("side")));
+assert(engine.validateLoadedSnapshot({ market: {}, legs: Array.from({ length: 25 }, () => ({ side: "long", type: "call", strike: 100, premium: 1, qty: 1 })) }).some((error) => error.includes("Limit")));
 
 const call = engine.blackScholes("call", 100, 100, 1, 0.05, 0.2);
 assert(Math.abs(call.price - 10.45) < 0.08, `call price was ${call.price}`);

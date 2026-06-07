@@ -9,8 +9,14 @@ const positionSummaryEl = document.getElementById("positionSummary");
 const riskFlagsEl = document.getElementById("riskFlags");
 const printInputsEl = document.getElementById("printInputs");
 const tailRiskEl = document.getElementById("tailRisk");
+const quickRiskSummaryEl = document.getElementById("quickRiskSummary");
+const strategyEducationTitleEl = document.getElementById("strategyEducationTitle");
+const strategyEducationBodyEl = document.getElementById("strategyEducationBody");
+const strategyEducationChecksEl = document.getElementById("strategyEducationChecks");
 const chart = document.getElementById("payoffChart");
 const ctx = chart.getContext("2d");
+const MAX_STRATEGY_JSON_BYTES = 128 * 1024;
+const MAX_IMPORTED_LEGS = 24;
 
 const presets = {
   coveredCall: [
@@ -44,10 +50,72 @@ const presets = {
     { side: "long", type: "call", strike: 500, premium: 14, qty: 1 },
     { side: "short", type: "call", strike: 530, premium: 5, qty: 2 },
   ],
-  putCalendarApprox: [
-    { side: "short", type: "put", strike: 500, premium: 8, qty: 1 },
-    { side: "long", type: "put", strike: 500, premium: 13, qty: 1 },
-  ],
+};
+
+const strategyEducation = {
+  coveredCall: {
+    title: "Covered Call",
+    body: "A long underlying position plus a short call. The premium lowers entry cost, but the short call caps upside above its strike. This is not free income: you sell part of the future upside.",
+    checks: [
+      "Check the price where you give up further upside.",
+      "Compare maximum profit with the downside risk of the stock or ETF.",
+      "Watch dividends and assignment risk on American-style options.",
+    ],
+  },
+  bullCall: {
+    title: "Bull Call Spread",
+    body: "A defined-risk bullish structure. The long call gives upside exposure and the short call helps finance it, but the payoff is capped above the higher strike.",
+    checks: [
+      "Check whether maximum profit is meaningful relative to the debit paid.",
+      "Look at breakeven, because direction alone is not enough.",
+      "Wide bid/ask spreads can consume a large part of a narrow spread's edge.",
+    ],
+  },
+  ironCondor: {
+    title: "Iron Condor",
+    body: "A range-bound strategy: sell a put spread and a call spread outside spot. Risk is defined by the wings, but a small-profit versus larger-loss profile can still be fragile.",
+    checks: [
+      "Check maximum loss before looking at premium collected.",
+      "Inspect how P/L changes after a 5-10% spot move.",
+      "Four legs mean execution quality and liquidity matter.",
+    ],
+  },
+  shortStrangle: {
+    title: "Short Strangle",
+    body: "A short put and short call outside spot. It can collect premium while markets stay calm, but upside loss is unbounded and large moves can dominate many small wins.",
+    checks: [
+      "Do not judge the trade by premium alone. Inspect the tail.",
+      "Check a spot shock and volatility shock together.",
+      "A clear exit plan and risk limit matter before entry.",
+    ],
+  },
+  longStraddle: {
+    title: "Long Straddle",
+    body: "A long call and long put at the same strike. It buys the right to benefit from a large move in either direction. The main drag is theta if the move or volatility expansion does not arrive.",
+    checks: [
+      "Check how far price must move to reach breakeven.",
+      "Compare spot-move scenarios with IV-crush scenarios.",
+      "Buying volatility can still lose even when the market moves.",
+    ],
+  },
+  collar: {
+    title: "Collar",
+    body: "A long underlying position, protective put, and short call. It turns an open-ended stock profile into a risk-and-reward corridor.",
+    checks: [
+      "Check how much downside protection the put actually gives.",
+      "See where the short call caps further upside.",
+      "Protective intent does not remove execution and assignment risk.",
+    ],
+  },
+  ratioCallSpread: {
+    title: "Ratio Call Spread",
+    body: "Fewer long calls and more short calls at a higher strike. It may look cheap, but the extra short call creates unbounded upside loss if the underlying rises strongly.",
+    checks: [
+      "Inspect the right tail of the payoff chart.",
+      "Do not confuse low entry cost with low risk.",
+      "Find the price where losses begin to expand quickly.",
+    ],
+  },
 };
 
 function normalCdf(x) {
@@ -187,6 +255,49 @@ function showValidation(errors) {
   validationEl.innerHTML = errors.map((error) => `<div>${escapeHtml(error)}</div>`).join("");
 }
 
+function validateLoadedSnapshot(snapshot) {
+  const errors = [];
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return ["Strategy JSON must contain an object."];
+  }
+  if (!snapshot.market || typeof snapshot.market !== "object" || Array.isArray(snapshot.market)) {
+    errors.push("Missing market section.");
+  }
+  if (!Array.isArray(snapshot.legs)) {
+    errors.push("Missing legs array.");
+  } else if (snapshot.legs.length > MAX_IMPORTED_LEGS) {
+    errors.push(`Strategy has too many legs. Limit: ${MAX_IMPORTED_LEGS}.`);
+  }
+
+  const market = snapshot.market || {};
+  ["spot", "days", "iv", "rate", "dividend", "multiplier"].forEach((field) => {
+    if (field in market && !Number.isFinite(parseNumeric(market[field]))) {
+      errors.push(`Market.${field} must be numeric.`);
+    }
+  });
+
+  (snapshot.legs || []).forEach((leg, index) => {
+    if (!leg || typeof leg !== "object" || Array.isArray(leg)) {
+      errors.push(`Leg ${index + 1}: entry must be an object.`);
+      return;
+    }
+    if (!["long", "short"].includes(leg.side)) errors.push(`Leg ${index + 1}: side must be long or short.`);
+    if (!["call", "put", "stock"].includes(leg.type)) errors.push(`Leg ${index + 1}: type must be call, put, or stock.`);
+    ["strike", "premium", "qty"].forEach((field) => {
+      if (!(field in leg) || !Number.isFinite(parseNumeric(leg[field]))) {
+        errors.push(`Leg ${index + 1}: ${field} must be numeric.`);
+      }
+    });
+    ["iv", "bid", "ask", "openInterest"].forEach((field) => {
+      if (field in leg && String(leg[field]).trim() !== "" && !Number.isFinite(parseNumeric(leg[field]))) {
+        errors.push(`Leg ${index + 1}: ${field} must be numeric or blank.`);
+      }
+    });
+  });
+
+  return errors.slice(0, 20);
+}
+
 function signed(leg) {
   return leg.side === "long" ? 1 : -1;
 }
@@ -289,7 +400,7 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     <label>Strike
       <input class="strike" type="number" step="0.01">
     </label>
-    <label>Premium
+    <label>${leg.type === "stock" ? "Cost Basis" : "Premium"}
       <input class="premium" type="number" step="0.01">
     </label>
     <label>Qty
@@ -328,12 +439,36 @@ function addLeg(leg = { side: "long", type: "call", strike: 500, premium: 10, qt
     render();
   });
   row.querySelectorAll("input, select").forEach((el) => el.addEventListener("input", render));
+  row.querySelector(".type").addEventListener("change", () => updateLegLabels(row));
+  updateLegLabels(row);
   legsEl.appendChild(row);
+}
+
+function updateLegLabels(row) {
+  const premiumLabel = row.querySelector(".premium").closest("label");
+  const isStock = row.querySelector(".type").value === "stock";
+  premiumLabel.firstChild.textContent = isStock ? "Cost Basis\n      " : "Premium\n      ";
+}
+
+function renderStrategyEducation(name) {
+  const info = strategyEducation[name] || {
+    title: "Custom Strategy",
+    body: "This is a manually built structure. Use the app as a risk checklist: payoff, breakeven, tail risk, Greeks, liquidity, and scenarios.",
+    checks: [
+      "Name the assumption the position depends on.",
+      "Check whether expiry payoff risk is defined or unbounded.",
+      "Write the exit plan before entering the trade.",
+    ],
+  };
+  strategyEducationTitleEl.textContent = info.title;
+  strategyEducationBodyEl.textContent = info.body;
+  strategyEducationChecksEl.innerHTML = info.checks.map((item) => `<div>${escapeHtml(item)}</div>`).join("");
 }
 
 function setPreset(name) {
   legsEl.innerHTML = "";
   presets[name].forEach(addLeg);
+  renderStrategyEducation(name);
   render();
 }
 
@@ -348,6 +483,7 @@ function setStrategy(snapshot) {
   if (Number.isFinite(market.multiplier)) document.getElementById("multiplier").value = market.multiplier;
   legsEl.innerHTML = "";
   (snapshot.legs || []).forEach(addLeg);
+  renderStrategyEducation("custom");
   render();
 }
 
@@ -562,6 +698,15 @@ function renderSummary(market, points, risk, netGreeks) {
     ["Days", market.days.toFixed(0)],
     ["Dividend Yield", `${(market.dividend * 100).toFixed(2)}%`],
   ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function renderQuickRiskSummary(risk, breakevenPoints) {
+  const breakevenText = breakevenPoints.map((point) => point.toFixed(2)).join(", ") || "none";
+  quickRiskSummaryEl.className = `quickRiskSummary ${risk.definedRisk ? "" : "danger"}`;
+  quickRiskSummaryEl.innerHTML = `
+    <strong>${risk.definedRisk ? "Defined risk" : "Unbounded loss risk"}</strong>
+    <span>Max loss: ${Number.isFinite(risk.min) ? money(risk.min) : "unbounded"} | Max profit: ${Number.isFinite(risk.max) ? money(risk.max) : "unbounded"} | Breakeven: ${escapeHtml(breakevenText)}</span>
+  `;
 }
 
 function renderScenarios(rows) {
@@ -874,6 +1019,7 @@ function render() {
   const breakevenPoints = breakEvens(legs, market);
 
   drawChart(points, legs, market, breakevenPoints, risk);
+  renderQuickRiskSummary(risk, breakevenPoints);
   renderSummary(market, points, risk, netGreeks);
   renderScenarios(scenarios);
   renderComparison(scenarios, market);
@@ -1002,10 +1148,20 @@ function saveStrategy() {
 }
 
 function loadStrategy(file) {
+  if (file.size > MAX_STRATEGY_JSON_BYTES) {
+    showValidation([`Strategy JSON is too large. Limit: ${Math.round(MAX_STRATEGY_JSON_BYTES / 1024)} KB.`]);
+    return;
+  }
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     try {
-      setStrategy(JSON.parse(reader.result));
+      const snapshot = JSON.parse(reader.result);
+      const errors = validateLoadedSnapshot(snapshot);
+      if (errors.length) {
+        showValidation(errors);
+        return;
+      }
+      setStrategy(snapshot);
     } catch (error) {
       showValidation([`Could not load strategy JSON: ${error.message}`]);
     }
