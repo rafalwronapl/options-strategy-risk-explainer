@@ -787,8 +787,10 @@ function exportReport() {
   const market = snapshot.market;
   const legs = snapshot.legs;
   const scenarios = scenarioRows(legs, market);
+  const generatedAt = new Date().toISOString();
   const text = [
     `Derivatives Risk Explainer Report`,
+    `Generated: ${generatedAt}`,
     `Symbol: ${market.symbol}`,
     `Spot: ${market.spot}`,
     `Days: ${market.days}`,
@@ -803,6 +805,12 @@ function exportReport() {
     "Scenarios:",
     ...scenarios.map((row) => `${row.name}: spot=${row.spot.toFixed(2)}, IV=${(row.iv * 100).toFixed(1)}%, days=${row.days.toFixed(0)}, P/L=${money(row.pl)}`),
     "",
+    "Model Assumptions:",
+    "European Black-Scholes approximation for mark-to-model scenarios.",
+    "Per-leg IV is supported, but no volatility smile/skew surface is inferred.",
+    "Dividend yield is modeled as a continuous yield approximation.",
+    "No borrow costs, commissions, slippage, or broker margin model.",
+    "",
     [...document.querySelectorAll(".reportBlock")].map((node) => node.innerText).join("\n\n"),
   ].join("\n");
   const blob = new Blob([text], { type: "text/plain" });
@@ -811,6 +819,11 @@ function exportReport() {
   link.download = `${market.symbol || "strategy"}-risk-report.txt`;
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+function printReport() {
+  document.body.dataset.printedAt = new Date().toLocaleString();
+  window.print();
 }
 
 function csvEscape(value) {
@@ -901,6 +914,7 @@ document.getElementById("addLeg").addEventListener("click", () => {
 });
 document.getElementById("exportReport").addEventListener("click", exportReport);
 document.getElementById("exportCsv").addEventListener("click", exportCsv);
+document.getElementById("printReport").addEventListener("click", printReport);
 document.getElementById("saveStrategy").addEventListener("click", saveStrategy);
 document.getElementById("loadStrategy").addEventListener("change", (event) => {
   if (event.target.files[0]) loadStrategy(event.target.files[0]);

@@ -34,6 +34,7 @@ The project is intentionally dependency-light. The prototype is plain HTML/CSS/J
 - Deterministic risk officer report.
 - Save/load strategy JSON.
 - Text risk report export.
+- Browser Print/PDF report mode.
 - Strategy vs underlying comparison.
 - Exposure breakdown.
 - IV stress shifts each option leg relative to its own IV.
