@@ -27,6 +27,7 @@ npm run check
 ```
 
 The project is intentionally dependency-light. The prototype is plain HTML/CSS/JS and the tests run with Node.
+The browser smoke test uses Playwright to verify core UI interactions.
 
 ## Current Scope
 
@@ -50,6 +51,7 @@ The project is intentionally dependency-light. The prototype is plain HTML/CSS/J
 - Liquidity warnings for wide bid/ask spreads and low open interest.
 - CSV export for assumptions, legs, and scenario rows.
 - Core math tests.
+- Browser smoke test for preset selection, JSON import, chart rendering, and stock cost-basis labeling.
 
 ## Important
 
@@ -101,6 +103,7 @@ This checks JavaScript syntax and runs core math tests for:
 - iron condor defined risk/reward,
 - covered call defined risk/reward,
 - short strangle unlimited upside loss.
+- browser smoke coverage for preset selection, selected-strategy education, JSON import, and nonblank chart rendering.
 
 ## Next Technical Steps
 

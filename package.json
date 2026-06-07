@@ -4,8 +4,9 @@
   "private": true,
   "description": "Deterministic options strategy risk explainer prototype.",
   "scripts": {
-    "check": "node --check app.js && node tests/core.test.js",
-    "test": "node tests/core.test.js"
+    "check": "node --check app.js && node --check tests/browser-smoke.test.js && node tests/core.test.js && node tests/browser-smoke.test.js",
+    "test": "node tests/core.test.js",
+    "test:browser": "node tests/browser-smoke.test.js"
   },
   "keywords": [
     "options",
@@ -13,5 +14,8 @@
     "options-strategies",
     "education"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
 }
