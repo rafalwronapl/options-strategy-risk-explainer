@@ -7,6 +7,8 @@
 
 Prototype of an educational options strategy risk explainer.
 
+Live demo: https://rafalwronapl.github.io/options-strategy-risk-explainer/
+
 The product angle is deliberately not "AI tells you what to trade". The core idea is:
 
 > Deterministic math engine first. AI, if added later, only explains calculated risk.
@@ -22,6 +24,18 @@ describes those calculated outputs.
 
 That makes the project useful as a browser-only risk explainer and as a clean
 foundation for any future AI layer that must stay source-backed.
+
+## Run In 60 Seconds
+
+Open the live demo, or run locally:
+
+```bash
+npm ci
+npm run check
+```
+
+For local use without installing dependencies, open `index.html` directly in a
+browser.
 
 ## Demo
 
