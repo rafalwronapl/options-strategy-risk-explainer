@@ -48,6 +48,12 @@ The project is intentionally dependency-light. The prototype is plain HTML/CSS/J
 - CSV export for assumptions, legs, and scenario rows.
 - Core math tests.
 
+## Important
+
+Read [DISCLAIMER.md](DISCLAIMER.md) before using the prototype for any real-world analysis. The tool is educational and does not provide investment advice or trading recommendations.
+
+Validation details are documented in [VALIDATION.md](VALIDATION.md).
+
 ## Not In Scope Yet
 
 - Trading signals.
