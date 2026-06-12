@@ -35,6 +35,11 @@ async function canvasHasPixels(page) {
   assert.match(await page.locator("#quickRiskSummary").innerText(), /Unbounded loss risk/);
   assert.strictEqual(await page.locator("#strategyEducationTitle").innerText(), "Custom Strategy");
 
+  await page.setInputFiles("#loadStrategy", path.join(__dirname, "..", "examples", "protective-put-defined-risk.json"));
+  await page.waitForFunction(() => document.querySelector("#quickRiskSummary")?.textContent?.includes("Defined risk"));
+  assert.match(await page.locator("#quickRiskSummary").innerText(), /Defined risk/);
+  assert.strictEqual(await page.locator("#strategyEducationTitle").innerText(), "Custom Strategy");
+
   await browser.close();
   console.log("browser smoke passed");
 })().catch(async (error) => {
