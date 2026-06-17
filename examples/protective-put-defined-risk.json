@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "market": {
+    "symbol": "XYZ",
+    "spot": 100,
+    "days": 45,
+    "iv": 0.3,
+    "rate": 0.04,
+    "dividend": 0.01,
+    "multiplier": 100
+  },
+  "legs": [
+    { "side": "long", "type": "stock", "strike": 0, "premium": 100, "qty": 1, "iv": 0.3 },
+    { "side": "long", "type": "put", "strike": 95, "premium": 2.5, "qty": 1, "iv": 0.32, "bid": 2.35, "ask": 2.65, "openInterest": 520 }
+  ]
+}

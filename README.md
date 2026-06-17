@@ -55,6 +55,7 @@ Use `Load JSON` with files from `examples/` to test known structures:
 - `iron-condor-defined-risk.json`
 - `short-strangle-unlimited-risk.json`
 - `covered-call-dividend-risk.json`
+- `protective-put-defined-risk.json`
 
 ## Development
 

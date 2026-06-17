@@ -182,6 +182,7 @@ assert(spreadHeavyReport.some((block) => block.title === "Spread cost vs max pro
 const exampleExpectations = [
   ["iron-condor-defined-risk.json", true],
   ["covered-call-dividend-risk.json", true],
+  ["protective-put-defined-risk.json", true],
   ["short-strangle-unlimited-risk.json", false],
 ];
 
