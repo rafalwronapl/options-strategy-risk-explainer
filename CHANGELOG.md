@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added a pinned strategy comparison workspace.
+- Added side-by-side maximum risk/reward, Greeks, scenario P/L deltas, and a
+  two-line expiry payoff chart.
+- Added core and browser regression coverage for defined-risk versus
+  unlimited-risk comparisons.
+
 ## 0.1.0
 
 Initial early options strategy risk prototype.

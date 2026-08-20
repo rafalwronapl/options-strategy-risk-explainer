@@ -3,8 +3,8 @@ const path = require("path");
 const { pathToFileURL } = require("url");
 const { chromium } = require("playwright");
 
-async function canvasHasPixels(page) {
-  return page.locator("#payoffChart").evaluate((canvas) => {
+async function canvasHasPixels(page, selector = "#payoffChart") {
+  return page.locator(selector).evaluate((canvas) => {
     const ctx = canvas.getContext("2d");
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let colored = 0;
@@ -16,7 +16,7 @@ async function canvasHasPixels(page) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || undefined });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(pathToFileURL(path.join(__dirname, "..", "index.html")).href);
 
@@ -25,6 +25,15 @@ async function canvasHasPixels(page) {
   assert.strictEqual(await page.locator("#strategyEducationTitle").innerText(), "Short Strangle");
   assert.strictEqual(await page.locator(".leg").count(), 2);
   assert.strictEqual(await canvasHasPixels(page), true, "payoff chart should not be blank");
+
+  await page.click('[data-preset="ironCondor"]');
+  await page.click("#pinComparison");
+  await page.click('[data-preset="shortStrangle"]');
+  assert.strictEqual(await page.locator("#strategyComparison").isVisible(), true);
+  assert.match(await page.locator("#comparisonCards").innerText(), /Iron Condor/);
+  assert.match(await page.locator("#comparisonCards").innerText(), /Short Strangle/);
+  assert.strictEqual(await page.locator("#strategyComparisonRows tr").count(), 9);
+  assert.strictEqual(await canvasHasPixels(page, "#comparisonChart"), true, "comparison payoff chart should not be blank");
 
   await page.click('[data-preset="coveredCall"]');
   const firstPremiumLabel = await page.locator(".leg").first().locator(".premium").locator("xpath=..").innerText();

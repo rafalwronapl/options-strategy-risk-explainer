@@ -82,6 +82,8 @@ The browser smoke test uses Playwright to verify core UI interactions.
 - Basic schema validation and size limit for loaded strategy JSON.
 - Text risk report export.
 - Browser Print/PDF report mode.
+- Pin-and-compare workspace for two strategies, including payoff overlays,
+  risk metrics, Greeks, and scenario P/L differences.
 - Strategy vs underlying comparison.
 - Exposure breakdown.
 - IV stress shifts each option leg relative to its own IV.
@@ -144,9 +146,8 @@ This checks JavaScript syntax and runs core math tests for:
 
 ## Next Technical Steps
 
-1. Add PDF export.
-2. Add portfolio-level exposure by underlying and expiration.
-3. Add better mobile chart controls.
-4. Add margin/risk approximations per broker model.
-5. Add optional data adapter for ORATS, Polygon, Tradier, IBKR, or Deribit.
-6. Add LLM explanation layer only after all numbers are source-backed.
+1. Add portfolio-level exposure by underlying and expiration.
+2. Add better mobile chart controls.
+3. Add margin/risk approximations per broker model.
+4. Add optional data adapter for ORATS, Polygon, Tradier, IBKR, or Deribit.
+5. Add LLM explanation layer only after all numbers are source-backed.

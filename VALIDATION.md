@@ -28,6 +28,9 @@ This performs:
 - Report block checks for covered call and short strangle.
 - Liquidity warning checks.
 - Fixture checks for JSON examples.
+- Pinned-versus-current strategy comparison checks.
+- Browser coverage for comparison cards, nine scenario deltas, and a nonblank
+  comparison payoff chart.
 
 ## Manual Regression Fixtures
 

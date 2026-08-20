@@ -15,8 +15,11 @@ const strategyEducationBodyEl = document.getElementById("strategyEducationBody")
 const strategyEducationChecksEl = document.getElementById("strategyEducationChecks");
 const chart = document.getElementById("payoffChart");
 const ctx = chart.getContext("2d");
+const comparisonChart = document.getElementById("comparisonChart");
+const comparisonCtx = comparisonChart.getContext("2d");
 const MAX_STRATEGY_JSON_BYTES = 128 * 1024;
 const MAX_IMPORTED_LEGS = 24;
+let pinnedStrategy = null;
 
 const presets = {
   coveredCall: [
@@ -226,6 +229,34 @@ function strategySnapshot() {
     market: readInputs(),
     legs: readLegs(),
   };
+}
+
+function analyzeSnapshot(snapshot) {
+  const market = snapshot.market;
+  const legs = snapshot.legs;
+  const risk = exactPayoffRisk(legs, market);
+  return {
+    label: snapshot.label || market.symbol || "Strategy",
+    market,
+    legs,
+    risk,
+    greeks: greeks(legs, market),
+    breakevens: breakEvens(legs, market),
+    scenarios: scenarioRows(legs, market),
+  };
+}
+
+function compareSnapshots(pinned, current) {
+  const baseline = analyzeSnapshot(pinned);
+  const candidate = analyzeSnapshot(current);
+  const currentByName = new Map(candidate.scenarios.map((row) => [row.name, row]));
+  const scenarios = baseline.scenarios.map((row) => ({
+    name: row.name,
+    pinned: row.pl,
+    current: currentByName.get(row.name)?.pl ?? NaN,
+    difference: (currentByName.get(row.name)?.pl ?? NaN) - row.pl,
+  }));
+  return { baseline, current: candidate, scenarios };
 }
 
 function validateStrategy(market, legs) {
@@ -657,6 +688,103 @@ function drawChart(points, legs, market, breakevens, risk) {
   }
 }
 
+function drawComparisonChart(comparison) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = comparisonChart.getBoundingClientRect();
+  const width = rect.width;
+  const height = 320;
+  const pad = 42;
+  comparisonChart.width = Math.round(width * dpr);
+  comparisonChart.height = Math.round(height * dpr);
+  comparisonCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  comparisonCtx.clearRect(0, 0, width, height);
+
+  const ranges = [comparison.baseline, comparison.current].map((item) => chartRange(item.legs, item.market, item.risk));
+  const low = Math.min(...ranges.map((range) => range.low));
+  const high = Math.max(...ranges.map((range) => range.high));
+  const spots = Array.from({ length: 101 }, (_, index) => low + ((high - low) * index) / 100);
+  const series = [
+    { color: "#a15c10", values: spots.map((spot) => totalPayoff(comparison.baseline.legs, spot, comparison.baseline.market.multiplier)) },
+    { color: "#0f766e", values: spots.map((spot) => totalPayoff(comparison.current.legs, spot, comparison.current.market.multiplier)) },
+  ];
+  const allValues = series.flatMap((item) => item.values);
+  const minY = Math.min(0, ...allValues);
+  const maxY = Math.max(0, ...allValues);
+  const ySpan = maxY - minY || 1;
+  const xScale = (value) => pad + ((value - low) / (high - low || 1)) * (width - pad * 2);
+  const yScale = (value) => height - pad - ((value - minY) / ySpan) * (height - pad * 2);
+
+  comparisonCtx.strokeStyle = "#d7dfdb";
+  comparisonCtx.lineWidth = 1;
+  comparisonCtx.beginPath();
+  comparisonCtx.moveTo(pad, yScale(0));
+  comparisonCtx.lineTo(width - pad, yScale(0));
+  comparisonCtx.stroke();
+  series.forEach((item) => {
+    comparisonCtx.strokeStyle = item.color;
+    comparisonCtx.lineWidth = 3;
+    comparisonCtx.beginPath();
+    item.values.forEach((value, index) => {
+      const x = xScale(spots[index]);
+      const y = yScale(value);
+      if (index === 0) comparisonCtx.moveTo(x, y);
+      else comparisonCtx.lineTo(x, y);
+    });
+    comparisonCtx.stroke();
+  });
+  comparisonCtx.font = "12px Segoe UI, Arial";
+  comparisonCtx.fillStyle = "#a15c10";
+  comparisonCtx.fillText(`Pinned: ${comparison.baseline.label}`, pad, 18);
+  comparisonCtx.fillStyle = "#0f766e";
+  comparisonCtx.fillText(`Current: ${comparison.current.label}`, pad + 210, 18);
+  comparisonCtx.fillStyle = "#5d6965";
+  comparisonCtx.fillText(`Low ${money(minY)}`, pad, height - 12);
+  comparisonCtx.fillText(`High ${money(maxY)}`, width - pad - 105, 18);
+}
+
+function comparisonCard(item, kind) {
+  const risk = item.risk;
+  return `<article class="comparisonCard ${kind}">
+    <span>${kind === "current" ? "Current structure" : "Pinned baseline"}</span>
+    <h3>${escapeHtml(item.label)}</h3>
+    <div class="comparisonMetrics">
+      <div><small>Max loss</small><strong>${Number.isFinite(risk.min) ? money(risk.min) : "unbounded"}</strong></div>
+      <div><small>Max profit</small><strong>${Number.isFinite(risk.max) ? money(risk.max) : "unlimited"}</strong></div>
+      <div><small>Risk</small><strong>${risk.definedRisk ? "defined" : "unbounded"}</strong></div>
+      <div><small>Delta</small><strong>${item.greeks.delta.toFixed(1)}</strong></div>
+      <div><small>Theta/day</small><strong>${money(item.greeks.theta)}</strong></div>
+      <div><small>Vega/pt</small><strong>${money(item.greeks.vega)}</strong></div>
+    </div>
+  </article>`;
+}
+
+function renderStrategyComparison(currentSnapshot) {
+  const empty = document.getElementById("comparisonEmpty");
+  const content = document.getElementById("strategyComparison");
+  const clear = document.getElementById("clearComparison");
+  if (!pinnedStrategy) {
+    empty.hidden = false;
+    content.hidden = true;
+    clear.hidden = true;
+    return;
+  }
+  const current = { ...currentSnapshot, label: strategyEducationTitleEl.textContent };
+  const comparison = compareSnapshots(pinnedStrategy, current);
+  empty.hidden = true;
+  content.hidden = false;
+  clear.hidden = false;
+  document.getElementById("comparisonCards").innerHTML = `${comparisonCard(comparison.baseline, "baseline")}<div class="comparisonDelta">VS</div>${comparisonCard(comparison.current, "current")}`;
+  document.getElementById("baselineScenarioLabel").textContent = comparison.baseline.label;
+  document.getElementById("currentScenarioLabel").textContent = comparison.current.label;
+  document.getElementById("strategyComparisonRows").innerHTML = comparison.scenarios.map((row) => `<tr>
+    <td>${escapeHtml(row.name)}</td>
+    <td class="${row.pinned >= 0 ? "profit" : "loss"}">${money(row.pinned)}</td>
+    <td class="${row.current >= 0 ? "profit" : "loss"}">${money(row.current)}</td>
+    <td class="${row.difference >= 0 ? "profit" : "loss"}">${money(row.difference)}</td>
+  </tr>`).join("");
+  drawComparisonChart(comparison);
+}
+
 function scenarioRows(legs, market) {
   const base = totalModelPl(legs, market);
   return [
@@ -1028,6 +1156,7 @@ function render() {
   renderPrintInputs(legs, market);
   renderTailRisk(legs, market, risk);
   renderReport(reportBlocks(legs, market, risk, netGreeks, scenarios));
+  renderStrategyComparison({ version: 1, market, legs });
 }
 
 function exportReport() {
@@ -1177,6 +1306,17 @@ document.getElementById("exportReport").addEventListener("click", exportReport);
 document.getElementById("exportCsv").addEventListener("click", exportCsv);
 document.getElementById("printReport").addEventListener("click", printReport);
 document.getElementById("saveStrategy").addEventListener("click", saveStrategy);
+document.getElementById("pinComparison").addEventListener("click", () => {
+  pinnedStrategy = {
+    ...JSON.parse(JSON.stringify(strategySnapshot())),
+    label: strategyEducationTitleEl.textContent,
+  };
+  render();
+});
+document.getElementById("clearComparison").addEventListener("click", () => {
+  pinnedStrategy = null;
+  render();
+});
 document.getElementById("loadStrategy").addEventListener("change", (event) => {
   if (event.target.files[0]) loadStrategy(event.target.files[0]);
 });

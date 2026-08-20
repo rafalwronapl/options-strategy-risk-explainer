@@ -26,7 +26,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
-vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, escapeHtml, csvEscape, presets, greeks, scenarioRows, reportBlocks, validateLoadedSnapshot };`, sandbox);
+vm.runInContext(`${code}\nthis.__riskEngine = { blackScholes, legPayoffAtExpiry, totalPayoff, boundedness, exactPayoffRisk, breakEvens, chartRange, normalCdf, parseNumeric, parseOptionalNumeric, escapeHtml, csvEscape, presets, greeks, scenarioRows, reportBlocks, validateLoadedSnapshot, analyzeSnapshot, compareSnapshots };`, sandbox);
 
 const engine = sandbox.__riskEngine;
 
@@ -125,6 +125,14 @@ assert.strictEqual(brokenWingRisk.definedRisk, true);
 assert.strictEqual(brokenWingRisk.definedReward, true);
 
 const market = { symbol: "SPY", spot: 500, days: 35, iv: 0.22, rate: 0.045, dividend: 0, multiplier: 100 };
+const comparisonResult = engine.compareSnapshots(
+  { label: "Iron Condor", market, legs: engine.presets.ironCondor },
+  { label: "Short Strangle", market, legs: engine.presets.shortStrangle }
+);
+assert.strictEqual(comparisonResult.baseline.risk.definedRisk, true);
+assert.strictEqual(comparisonResult.current.risk.definedRisk, false);
+assert.strictEqual(comparisonResult.scenarios.length, 9);
+assert(comparisonResult.scenarios.some((row) => row.name === "Spot +10%"));
 const coveredCallReport = engine.reportBlocks(
   engine.presets.coveredCall,
   market,

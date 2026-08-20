@@ -138,6 +138,102 @@ button.secondary:hover,
   grid-row: span 5;
 }
 
+.strategyCompare {
+  grid-column: 1 / -1;
+}
+
+.strategyCompare .sectionTitle {
+  align-items: flex-start;
+}
+
+.strategyCompare .sectionTitle p {
+  max-width: 700px;
+  line-height: 1.45;
+}
+
+.compareActions {
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+.comparisonEmpty {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  padding: 24px;
+  text-align: center;
+}
+
+.comparisonCards {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.comparisonCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfc;
+  padding: 14px;
+}
+
+.comparisonCard.current {
+  border-color: var(--accent);
+}
+
+.comparisonCard > span {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.comparisonCard h3 {
+  margin: 4px 0 12px;
+}
+
+.comparisonMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.comparisonMetrics div {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.comparisonMetrics small,
+.comparisonMetrics strong {
+  display: block;
+}
+
+.comparisonMetrics small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.comparisonMetrics strong {
+  margin-top: 3px;
+}
+
+.comparisonDelta {
+  align-self: center;
+  color: var(--accentDark);
+  font-weight: 800;
+  text-align: center;
+}
+
+#comparisonChart {
+  height: 320px;
+  margin-bottom: 14px;
+}
+
 .grid {
   display: grid;
   gap: 12px;
@@ -595,6 +691,18 @@ th {
 
   .educationGrid {
     grid-template-columns: 1fr;
+  }
+
+  .comparisonCards {
+    grid-template-columns: 1fr;
+  }
+
+  .comparisonDelta {
+    transform: rotate(90deg);
+  }
+
+  .comparisonMetrics {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

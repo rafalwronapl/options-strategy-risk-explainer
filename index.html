@@ -104,6 +104,30 @@
       <div id="printInputs"></div>
     </section>
 
+    <section class="panel strategyCompare">
+      <div class="sectionTitle">
+        <div>
+          <h2>Strategy Comparison</h2>
+          <p>Pin the current structure, then change presets or legs to compare deterministic risk outputs side by side.</p>
+        </div>
+        <div class="buttonRow compareActions">
+          <button id="pinComparison" type="button">Pin Current</button>
+          <button id="clearComparison" class="secondary" type="button" hidden>Clear</button>
+        </div>
+      </div>
+      <div id="comparisonEmpty" class="comparisonEmpty">No baseline pinned yet. Pin a strategy such as Iron Condor, then switch to Short Strangle.</div>
+      <div id="strategyComparison" hidden>
+        <div id="comparisonCards" class="comparisonCards"></div>
+        <canvas id="comparisonChart" width="1100" height="320" aria-label="Pinned and current payoff comparison"></canvas>
+        <div class="tableWrap">
+          <table>
+            <thead><tr><th>Scenario</th><th id="baselineScenarioLabel">Pinned</th><th id="currentScenarioLabel">Current</th><th>Current − pinned</th></tr></thead>
+            <tbody id="strategyComparisonRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="panel">
       <h2>Stress Scenarios</h2>
       <div class="tableWrap">
